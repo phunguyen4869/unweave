@@ -22,9 +22,14 @@
   - [09 — Job progress and ETA](specs/09-job-progress.md)
   - [10 — In-app update check](specs/10-updates.md)
 
+## Learning
+
+- [learning/notebooklm-pack.md](learning/notebooklm-pack.md) — Sources + prompts for NotebookLM / Gemini study
+- [learning/study-guide.md](learning/study-guide.md) — Condensed technical brief to upload as a source
+
 ## Handoff
 
-- [known-issues-handoff.md](known-issues-handoff.md) — Installer and first-run bugs for a fresh session
+- [archives/known-issues-handoff.md](archives/known-issues-handoff.md) — Installer and first-run bugs for a fresh session
 
 Upstream: Unweave is based on [Sound Razor](https://github.com/pedromtcosta/sound-razor) by
 pedromtcosta. The Python package (`unweave`) and the model cache (`.sound-razor/`)

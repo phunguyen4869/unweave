@@ -5,12 +5,34 @@ work (`unweave/`), a stdlib HTTP server exposes it, and a vanilla-JS frontend dr
 it. No audio leaves the computer; the only network traffic is model downloads, YouTube
 imports, and MusicBrainz lookups when you ask for them.
 
+## Contents
+
+1. [Data flow](#data-flow)
+   - [Sequence](#sequence)
+   - [Stage details](#stage-details)
+   - [Where the time goes](#where-the-time-goes)
+2. [Design rules](#design-rules)
+3. [Module responsibilities](#module-responsibilities)
+   - [`audio/`](#audio)
+   - [`webui/`](#webui)
+   - [`projects/`](#projects)
+   - [Top-level modules](#top-level-modules)
+4. [Models](#models)
+5. [Frontend (`web/`)](#frontend-web)
+6. [Dependencies](#dependencies)
+
+---
+
 ## Data flow
 
-One separation, from the click to the mixer, across the layers it passes through. The
-browser never calls the pipeline directly: the server queues a job, and the job runs the
-pipeline in its own `python -m unweave` process, which reports progress on stderr. The
-command line enters at that worker step. Shaded blocks are the seven stages.
+One separation, from the click to the mixer. The browser never calls the pipeline
+directly: the server queues a job, the job runs `python -m unweave` in its own
+process, and that worker reports progress on stderr (the queue reads the stream
+line by line). The UI learns status by polling `GET /api/state` (~1 s while busy).
+The command line enters at the same worker step. Labeled blocks below are the
+seven stages.
+
+### Sequence
 
 ```mermaid
 sequenceDiagram
@@ -21,76 +43,71 @@ sequenceDiagram
     participant ENG as Engines<br/>FFmpeg · PyTorch · ONNX
     participant FS as Project folder<br/>on disk
 
-    rect rgba(255, 138, 61, 0.10)
-    Note over UI,FS: 1. Entry points
-    UI->>SRV: POST /api/projects/{id}/separate<br/>plan + optional trim
-    SRV->>Q: start() checks free disk space, then enqueues
-    Q->>FS: create .separation-* staging folder
-    Q->>W: spawn python -m unweave separate --output staging
-    Note over W: The command line enters here directly<br/>python -m unweave separate --stems / --group / --split-guitar
-    Note over Q,W: Cancel or app close ends the worker's whole process tree<br/>(Job Object on Windows, process group elsewhere)
+    critical 1. Entry points
+        UI->>SRV: POST /api/projects/{id}/separate<br/>plan + optional trim
+        SRV->>Q: start() checks free disk space, then enqueues
+        Q->>FS: create .separation-* staging folder
+        Q->>W: spawn python -m unweave separate --output staging
+        Note over W: CLI enters here directly<br/>python -m unweave separate --stems / --group / --split-guitar
+        Note over Q,W: Cancel or app close kills the whole process tree<br/>(Job Object on Windows, process group elsewhere)
     end
 
-    loop every second while the job runs (alongside steps 2-6)
+    loop UI polls /api/state ~1s while the job runs (alongside steps 2–6)
         UI->>SRV: GET /api/state
         SRV->>Q: state()
         Q-->>UI: progress, step_progress, ETA, log tail
     end
 
-    rect rgba(92, 200, 255, 0.10)
-    Note over UI,FS: 2. Plan resolution, no audio touched yet
-    W->>W: resolve_plan() and model_request()<br/>own files vs stems folded into other.flac
-    alt only vocals + instrumental requested
-        W->>W: select_model() picks UVR_MDXNET_KARA_2 (MDX)
-    else any other stem
-        W->>W: select_model() picks htdemucs_6s, all 6 stems
-    end
-    end
-
-    rect rgba(255, 138, 61, 0.10)
-    Note over UI,FS: 3. Input preparation
-    W->>W: require_runtime() checks FFmpeg and audio-separator
-    W->>ENG: normalize() via FFmpeg<br/>44.1 kHz stereo WAV, trim applied
-    ENG-->>FS: input.wav in .unweave-input-* inside the staging folder
+    critical 2. Plan resolution (no audio yet)
+        W->>W: resolve_plan() and model_request()<br/>own files vs stems folded into other.flac
+        alt only vocals + instrumental requested
+            W->>W: select_model() picks UVR_MDXNET_KARA_2 (MDX)
+        else any other stem
+            W->>W: select_model() picks htdemucs_6s, all 6 stems
+        end
     end
 
-    rect rgba(92, 200, 255, 0.10)
-    Note over UI,FS: 4. Stem pass, roughly 1x realtime
-    W->>ENG: create_separator(), weights via cached_download()<br/>SHA-256 verified
-    W->>ENG: _run_demucs() on PyTorch or ONNX Runtime, cpu_threads()
-    ENG-->>FS: stems into .stems-* staging
-    W--)Q: stderr markers and percentages
+    critical 3. Input preparation
+        W->>W: require_runtime() checks FFmpeg and audio-separator
+        W->>ENG: normalize() via FFmpeg<br/>44.1 kHz stereo WAV, trim applied
+        ENG-->>FS: input.wav in .unweave-input-* inside the staging folder
     end
 
-    rect rgba(157, 140, 255, 0.12)
-    Note over UI,FS: 5. Guitar split, optional, roughly 10x the stem pass
-    opt the plan splits the guitar
-        W->>ENG: split_guitar() Mel-Band RoFormer on PyTorch<br/>3 s windows, 50% overlap, rhythm = input - lead
-        ENG-->>FS: lead.flac and rhythm.flac into staging
-        W--)Q: Splitting guitar markers and percentages
-    end
+    critical 4. Stem pass (~1× realtime)
+        W->>ENG: create_separator(), weights via cached_download()<br/>SHA-256 verified
+        W->>ENG: _run_demucs() on PyTorch or ONNX Runtime, cpu_threads()
+        ENG-->>FS: stems into .stems-* staging
+        W--)Q: stderr markers and percentages
     end
 
-    rect rgba(255, 138, 61, 0.10)
-    Note over UI,FS: 6. Assembly and publish
-    W->>ENG: _build_other() and mix_stems() via FFmpeg amix
-    W->>W: _collect() drops unrequested stems, validate_outputs()
-    W->>FS: separation.json with stems, group, trim, split model
-    W-->>Q: exit code 0
-    Q->>FS: swap staging into stems/<br/>old stems kept as backup until the rename succeeds
+    critical 5. Guitar split (optional, ~10× the stem pass)
+        opt the plan splits the guitar
+            W->>ENG: split_guitar() Mel-Band RoFormer on PyTorch<br/>3 s windows, 50% overlap, rhythm = input - lead
+            ENG-->>FS: lead.flac and rhythm.flac into staging
+            W--)Q: Splitting guitar markers and percentages
+        end
     end
 
-    rect rgba(92, 200, 255, 0.10)
-    Note over UI,FS: 7. After separation
-    UI->>SRV: GET /api/projects/{id}/audio/{file}
-    SRV->>FS: read the stem
-    SRV-->>UI: FLAC bytes into the Web Audio mixer
-    opt Export
-        UI->>SRV: POST /api/projects/{id}/export
-        SRV->>Q: export job re-encodes copies into exports/ via FFmpeg
+    critical 6. Assembly and publish
+        W->>ENG: _build_other() and mix_stems() via FFmpeg amix
+        W->>W: _collect() drops unrequested stems, validate_outputs()
+        W->>FS: separation.json with stems, group, trim, split model
+        W-->>Q: exit code 0
+        Q->>FS: swap staging into stems/<br/>old stems kept as backup until the rename succeeds
     end
+
+    critical 7. After separation
+        UI->>SRV: GET /api/projects/{id}/audio/{file}
+        SRV->>FS: read the stem
+        SRV-->>UI: FLAC bytes into the Web Audio mixer
+        opt Export
+            UI->>SRV: POST /api/projects/{id}/export
+            SRV->>Q: export job re-encodes copies into exports/ via FFmpeg
+        end
     end
 ```
+
+### Stage details
 
 What the arrows leave out, by stage:
 
@@ -119,7 +136,9 @@ A plain 6-stem separation therefore costs about the length of the song, and the 
 split costs roughly ten times that. Each step reports its own percentage for this reason:
 one shared bar would sit motionless through the entire split.
 
-## Design rules worth knowing
+---
+
+## Design rules
 
 These are the non-obvious decisions; most bugs in this area came from breaking one.
 
@@ -164,9 +183,12 @@ These are the non-obvious decisions; most bugs in this area came from breaking o
 - **The UI process never imports torch.** CUDA support is read from the installed
   files (`setup_env.torch_has_cuda()`), so the long-running server stays small.
 
+---
+
 ## Module responsibilities
 
 ### `audio/`
+
 - `pipeline.py` — the whole separation path. `model_request()` / `resolve_plan()` turn
   the flags into a plan, `select_model()` picks the network, `normalize()` converts to
   44.1 kHz stereo 16-bit PCM with a 5 ms fade at trim edges, `_run_demucs()` runs
@@ -188,6 +210,7 @@ These are the non-obvious decisions; most bugs in this area came from breaking o
   the argv, `youtube_audio()` extracts to a temp WAV.
 
 ### `webui/`
+
 - `server.py` — stdlib `http.server` on 127.0.0.1:8765 with a per-session token header.
   Everything outside `/api/` is a static file from `web/`. Routes:
 
@@ -210,6 +233,7 @@ These are the non-obvious decisions; most bugs in this area came from breaking o
   leftover scan.
 
 ### `projects/`
+
 - `store.py` — the on-disk project format and safe operations: `import_project()`,
   `describe_project()`, `list_projects()`, `save_metadata()`, `apply_enrichment()`,
   `cover_path()`, plus `atomic_json()` for crash-safe writes and `probe_audio()` to
@@ -218,6 +242,7 @@ These are the non-obvious decisions; most bugs in this area came from breaking o
   request per second. Only the text fields are sent.
 
 ### Top-level modules
+
 - `cli.py` / `__main__.py` — `python -m unweave` (`separate`, `split-guitar`, `export`,
   `ui`). The worker process every job runs.
 - `setup_env.py` — first-run dependency detection and installation. `runtime_ok()`,
@@ -235,6 +260,8 @@ These are the non-obvious decisions; most bugs in this area came from breaking o
   `require_free_space()`, `app_version()`.
 - `updates.py` — the GitHub Releases lookup behind the update check (spec 10).
 
+---
+
 ## Models
 
 | Model | File | Output | Backend | Chosen when |
@@ -248,6 +275,8 @@ Weights live in `%LOCALAPPDATA%\Unweave\models` in an installed app
 (`~/.cache/unweave/models` on Linux, `.sound-razor/models/` in a dev checkout, or
 `--cache`) and are verified against a pinned SHA-256 on every load, so a corrupted or
 swapped file fails loudly instead of producing garbage audio.
+
+---
 
 ## Frontend (`web/`)
 
@@ -264,6 +293,8 @@ role:
 
 - `css/` — six stylesheets: `base`, `chrome`, `views`, `song`, `plan`, `responsive`.
 - SoundTouchJS worklet — pitch-preserving speed change (MPL-2.0).
+
+---
 
 ## Dependencies
 
