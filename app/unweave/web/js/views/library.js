@@ -1,7 +1,7 @@
-import {$, el, jobPending, projectJob, notice} from '../core.js';
-import {store, nav} from '../store.js';
-import {coverImage} from '../covers.js';
-import {t} from '../i18n.js';
+import {$, el, jobPending, projectJob, notice} from '../core/core.js';
+import {store, nav} from '../core/store.js';
+import {coverImage} from '../features/covers.js';
+import {t} from '../core/i18n.js';
 /* ---------- library ---------- */
 export function renderLibrary() {
   $('library-folder').textContent = store.state.root || t('library.noFolderLower');

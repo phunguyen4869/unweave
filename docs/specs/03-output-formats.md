@@ -242,7 +242,7 @@ New method in `webui/library.py`, modelled on `start()`:
   - `"Exported "` → phase `finalize`, floor 96.
   - Per-file lines such as `"Exporting vocals.flac (3/12)"` are hidden from the
     log and drive the phase.
-- `web/js/progress.js` and `web/js/views/song.js`:
+- `web/js/features/progress.js` and `web/js/views/song.js`:
   - New `EXPORT_STEPS = [['prepare', 'Check files'], ['export', 'Convert stems'],
     ['finalize', 'Write files']]`.
   - `renderProgress()` treats `job.kind === 'export'` like the separation branch,

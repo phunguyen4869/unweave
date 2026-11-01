@@ -184,9 +184,12 @@ def describe_project(path: Path) -> dict:
                           "version": p.stat().st_mtime_ns,
                           "offset": float(trim["start"]) if trim else 0.0})
     cover = cover_path(path, data)
+    # Lets the player size the loading bar before any download starts.
+    original_bytes = (path / original).stat().st_size if original else 0
     return {"id": path.name, **fields, "cover": cover.name if cover else None,
             "title": fields["title"] or (Path(original).stem if original else path.name),
-            "original": original, "stems": stems, "separation": separation, "warnings": warnings}
+            "original": original, "original_bytes": original_bytes, "stems": stems,
+            "separation": separation, "warnings": warnings}
 
 
 def list_projects(root: Path) -> list[dict]:

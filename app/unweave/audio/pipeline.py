@@ -322,7 +322,10 @@ def separate(source: str, output: Path | None = None, model: str | None = None,
     import torch
     torch.set_num_threads(cpu_threads())
 
-    with tempfile.TemporaryDirectory(prefix="unweave-") as temporary:
+    # Keep the normalized input next to the job output (the UI's `.separation-*`
+    # staging folder) so an interrupted run leaves leftovers where the clean-up
+    # scanner can find them — not in %TEMP%.
+    with tempfile.TemporaryDirectory(prefix=".unweave-input-", dir=output) as temporary:
         work = Path(temporary)
         audio = youtube_audio(source, work) if youtube else Path(source).expanduser().resolve()
         saved_trim = parse_trim(trim, probe_duration(audio), 1.0) if trim is not None else None

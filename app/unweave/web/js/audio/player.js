@@ -1,4 +1,4 @@
-import {t} from './i18n.js';
+import {t} from '../core/i18n.js';
 // One AudioContext clock and one scheduled start time for every stem.
 export class StemPlayer {
   constructor() {

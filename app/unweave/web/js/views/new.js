@@ -1,11 +1,11 @@
-import {AUDIO_EXTENSIONS} from '../constants.js';
-import {$, el, notice, stem, api, sep, projectUrl, jobPending, findJob, queueBusy, token} from '../core.js';
-import {store, nav} from '../store.js';
-import {pickerValue, pickerValid} from '../picker.js';
-import {renderProgress} from '../progress.js';
-import {player} from '../audio.js';
-import {TrimEditor, trimRequest, sectionText, formatClock} from '../trim.js';
-import {t} from '../i18n.js';
+import {AUDIO_EXTENSIONS} from '../core/constants.js';
+import {$, el, notice, stem, api, sep, projectUrl, jobPending, findJob, queueBusy, token} from '../core/core.js';
+import {store, nav} from '../core/store.js';
+import {pickerValue, pickerValid} from '../features/picker.js';
+import {renderProgress} from '../features/progress.js';
+import {player} from '../audio/audio.js';
+import {TrimEditor, trimRequest, sectionText, formatClock} from '../audio/trim.js';
+import {t} from '../core/i18n.js';
 /* ---------- new separation ---------- */
 const TRIM_FIRST_KEY = 'unweave.youtubeTrimFirst';
 try { $('yt-trim-first').checked = localStorage.getItem(TRIM_FIRST_KEY) !== '0'; } catch (_) { /* default stays on */ }

@@ -1,10 +1,10 @@
-import {colors, ORIGINAL_COLOR, STEMS, ORIGINAL_FILE} from './constants.js';
-import {$, el, token, time, notice, jobPending, projectJob, projectUrl, stemLabel} from './core.js';
-import {store} from './store.js';
+import {colors, ORIGINAL_COLOR, STEMS, ORIGINAL_FILE} from '../core/constants.js';
+import {$, el, token, time, notice, jobPending, projectJob, projectUrl, stemLabel} from '../core/core.js';
+import {store} from '../core/store.js';
 import {StemPlayer} from './player.js';
 import {openSplitDialog} from './split.js';
 import {formatClock} from './trim.js';
-import {t, onLangChange} from './i18n.js';
+import {t, onLangChange} from '../core/i18n.js';
 export const player = new StemPlayer();
 player.onError = error => notice(error.message);
 export function clearAudio() {
@@ -58,7 +58,7 @@ export function buildLoadItems(project, root) {
   // loadAudio) once they exist, and is the only track when they don't yet, so the song
   // can be previewed before choosing what to separate.
   if (project.original) {
-    items.push({name: t('track.original'), file: ORIGINAL_FILE, offset: 0,
+    items.push({name: t('track.original'), file: ORIGINAL_FILE, offset: 0, bytes: project.original_bytes,
       url: `${projectUrl(project.id)}/original?${new URLSearchParams({root})}`});
   }
   for (const item of project.stems) {
@@ -76,21 +76,28 @@ export async function loadAudio(project) {
   if (!items.length) { $('audio-status').textContent = ''; return; }
   const tracks = [];
   const pills = buildStemPills(items);
-  const received = new Array(items.length).fill(0);
-  const totals = new Array(items.length).fill(0);
+  // Every file's share of the bar is fixed up front from the sizes the project already
+  // lists. Summing only the sizes seen so far made the bar hit 100% after the first file,
+  // then fall back each time the next file's size became known.
+  const known = items.map(item => Number(item.bytes) || 0);
+  const sizes = known.filter(Boolean);
+  const fallback = sizes.length ? sizes.reduce((a, b) => a + b, 0) / sizes.length : 1;
+  const weights = known.map(size => size || fallback);
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  let shown = 0;
+  const report = (i, part) => {
+    const done = weights.slice(0, i).reduce((a, b) => a + b, 0);
+    shown = Math.max(shown, (done + weights[i] * Math.max(0, Math.min(1, part))) / totalWeight);
+    setLoadingProgress(t('loading.itemOf', {name: items[i].name, index: i + 1, total: items.length}), shown);
+  };
   $('audio-loading').hidden = false;
   setLoadingProgress(t('loading.item', {name: items[0].name}), 0);
   try {
     for (const [i, item] of items.entries()) {
       pills.get(item.file)?.classList.add('loading');
-      setLoadingProgress(t('loading.itemOf', {name: item.name, index: i + 1, total: items.length}),
-        received.reduce((a, b) => a + b, 0) / (totals.reduce((a, b) => a + b, 0) || 1));
-      const encoded = await fetchWithProgress(item.url, signal, (got, total) => {
-        received[i] = got; totals[i] = total || Math.max(total, got);
-        const knownTotal = totals.reduce((a, b) => a + b, 0);
-        const fraction = knownTotal ? received.reduce((a, b) => a + b, 0) / knownTotal : i / items.length;
-        setLoadingProgress(t('loading.itemOf', {name: item.name, index: i + 1, total: items.length}), fraction);
-      }).catch(error => { throw new Error(t('audio.loadFailed', {name: item.name, error: error.message})); });
+      report(i, 0);
+      const encoded = await fetchWithProgress(item.url, signal, (got, total) => report(i, total ? got / total : 0))
+        .catch(error => { throw new Error(t('audio.loadFailed', {name: item.name, error: error.message})); });
       if (epoch !== store.loading) return;
       const buffer = await player.ensureContext().decodeAudioData(encoded);
       if (epoch !== store.loading) return;

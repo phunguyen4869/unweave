@@ -1,7 +1,7 @@
-import {SETUP_STAGE_FULL_LABEL} from '../constants.js';
-import {$, el, api, notice, jobRunning} from '../core.js';
-import {store, nav} from '../store.js';
-import {t} from '../i18n.js';
+import {$, el, api, notice, jobRunning} from '../core/core.js';
+import {store, nav} from '../core/store.js';
+import {t} from '../core/i18n.js';
+import {STAGE_ICONS, sizeText, speedText} from '../features/components.js';
 /* ---------- first-run setup ---------- */
 // How much of the overall 0-100 progress each running stage gets, in the same order
 // backend setup.py allocated bands (STAGE_ORDER, filtered to what was actually
@@ -37,38 +37,81 @@ export function renderSetup() {
     store.setupRunningStages = setup.stages.filter(s => s.missing && (s.required || s.id === job?.stage)).map(s => s.id);
   }
   for (const stage of setup.stages) {
-    if (stage.missing) total += stage.size_mb;
-    const row = el('label', 'setup-row');
-    const input = el('input'); input.type = 'checkbox';
-    input.disabled = stage.required || stage.done || running;
-    input.checked = stage.required || stage.done;
-    if (!stage.required && !stage.done) {
-      input.checked = store.setupYoutube;
-      input.onchange = () => { store.setupYoutube = input.checked; };
-    }
+    const optional = !stage.required && !stage.done;
+    const included = !optional || store.setupYoutube;
+    if (stage.missing && included) total += stage.size_mb;
     const pct = running ? stageProgress(stage.id, job) : null;
     const isDone = stage.done || pct === 100;
-    const isActive = running && pct !== null && pct > 0 && pct < 100;
-    const isQueued = running && pct === 0;
-    let icon = '↓', cls = 'setup-status--missing';
-    if (isDone) { icon = '✓'; cls = 'setup-status--done'; }
-    else if (isActive || job?.stage === stage.id) { icon = `${pct ?? 0}%`; cls = 'setup-status--active'; }
-    else if (isQueued) { icon = '⋯'; cls = 'setup-status--queued'; }
-    row.classList.toggle('setup-row--active', isActive || (running && job?.stage === stage.id));
-    row.classList.toggle('setup-row--done', isDone);
-    const status = el('span', `setup-status ${cls}`, icon);
-    const labelKey = SETUP_STAGE_FULL_LABEL[stage.id];
-    const label = labelKey ? t(labelKey) : stage.label;
-    row.append(input, status, el('span', 'setup-row-label', label), el('span', 'setup-row-size', `~${stage.size_mb} MB`));
-    if (isActive || (running && job?.stage === stage.id)) {
-      const bar = el('div', 'setup-row-bar'); const fill = el('i'); fill.style.width = `${pct ?? 0}%`; bar.append(fill);
-      row.append(bar);
+    const isActive = running && !isDone && (job?.stage === stage.id || (pct !== null && pct > 0));
+    const isQueued = running && !isDone && !isActive && pct === 0;
+    const state = isDone ? 'done' : isActive ? 'active' : isQueued ? 'queued' : included ? 'pending' : 'off';
+    // An optional item is a <label>, so a click anywhere on its card flips the switch.
+    const card = el(optional && !running ? 'label' : 'div', `setup-tile setup-tile--${state}`);
+    card.dataset.stage = stage.id;
+    const chip = isDone ? ['done', `✓ ${t('setup.chip.installed')}`]
+      : isActive ? ['active', t('setup.chip.installing')]
+      : isQueued ? ['queued', t('setup.chip.queued')]
+      : stage.required ? ['required', t('setup.chip.required')] : ['optional', t('setup.chip.optional')];
+    const icon = el('span', 'setup-tile-icon');
+    icon.innerHTML = STAGE_ICONS[stage.id] || STAGE_ICONS.runtime;
+    const top = el('div', 'setup-tile-top');
+    top.append(icon, el('span', `setup-chip setup-chip--${chip[0]}`, chip[1]));
+    const name = el('strong', 'setup-tile-name', t(`setup.name.${stage.id}`));
+    const desc = el('p', 'setup-tile-desc', t(`setup.desc.${stage.id}`));
+    const foot = el('div', 'setup-tile-foot');
+    foot.append(el('span', 'setup-tile-size', isDone ? t('setup.readyToUse') : `~${sizeText(stage.size_mb)}`));
+    if (optional) {
+      const toggle = el('span', 'setup-switch');
+      const input = el('input');
+      input.type = 'checkbox';
+      input.checked = store.setupYoutube;
+      input.disabled = running;
+      input.setAttribute('aria-label', t('setup.include'));
+      input.onchange = () => { store.setupYoutube = input.checked; renderSetup(); };
+      toggle.append(input, el('span', 'setup-switch-track'), el('span', 'setup-switch-text', t('setup.include')));
+      foot.append(toggle);
     }
-    list.append(row);
+    card.append(top, name, desc, foot);
+    list.append(card);
   }
-  $('setup-total').textContent = running
-    ? t('setup.installing', {pct: Math.floor(job.progress)})
-    : t('setup.totalSummary', {total});
+  const speed = running ? speedText(job.download_speed) : '';
+  const totalEl = $('setup-total');
+  totalEl.textContent = running
+    ? (speed
+      ? t('setup.installingSpeed', {pct: Math.floor(job.progress), speed})
+      : t('setup.installing', {pct: Math.floor(job.progress)}))
+    : t('setup.totalSummary', {total: sizeText(total)});
+  totalEl.classList.toggle('is-busy', running);
+  const activity = $('setup-activity');
+  if (running) {
+    const phase = ['download', 'install', 'prepare', 'finalize'].includes(job.phase) ? job.phase : 'install';
+    activity.hidden = false;
+    activity.textContent = speed
+      ? t('setup.activity.downloadSpeed', {speed})
+      : t(`setup.activity.${phase}`);
+  } else {
+    activity.hidden = true;
+    activity.textContent = '';
+  }
+  const overall = $('setup-overall-bar').parentElement;
+  overall.hidden = !running;
+  overall.classList.toggle('is-busy', running);
+  $('setup-overall-bar').style.width = `${running ? Math.floor(job.progress) : 0}%`;
+  const logPanel = $('setup-log');
+  const logBody = $('setup-log-body');
+  const logs = running ? (job.logs || []) : [];
+  if (running && logs.length) {
+    logPanel.hidden = false;
+    const text = logs.join('\n');
+    const nearBottom = logBody.scrollHeight - logBody.scrollTop - logBody.clientHeight < 40;
+    if (logBody.textContent !== text) {
+      logBody.textContent = text;
+      if (nearBottom) logBody.scrollTop = logBody.scrollHeight;
+    }
+  } else if (!running) {
+    logPanel.hidden = true;
+    logBody.textContent = '';
+  }
   const requiredMissing = setup.stages.some(s => s.required && s.missing);
   $('setup-start').disabled = !requiredMissing || running;
   $('setup-start').hidden = running;

@@ -7,12 +7,14 @@ already uses for separation jobs — no new frontend plumbing.
 
 import importlib.util
 import platform
+import re
 import shutil
 import stat
 import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import tomllib
 import zipfile
 from pathlib import Path
@@ -20,6 +22,23 @@ from urllib.request import urlopen
 
 from .processes import popen, stop as stop_process
 from .tools import EXE, embedded_runtime, ensure_ffmpeg_on_path, ffmpeg_dir, packages_prefix, MISSING_FFMPEG
+
+# pip prints "Downloading name (123.4 MB)" then, when a progress bar is available,
+# lines like "12.3/123.4 MB 2.5 MB/s". Both feed the setup download-speed UI.
+_PIP_DOWNLOAD_START = re.compile(
+    r"^\s*Downloading\s+(\S+)\s+\(([\d.,]+)\s*(kB|KB|MB|GB|KiB|MiB|GiB)\)\s*$",
+    re.IGNORECASE,
+)
+_PIP_DOWNLOAD_RATE = re.compile(
+    r"([\d.,]+)\s*/\s*([\d.,]+)\s*(kB|KB|MB|GB|KiB|MiB|GiB)"
+    r"\s+([\d.,]+)\s*(kB|KB|MB|GB|KiB|MiB|GiB)/s",
+    re.IGNORECASE,
+)
+_SIZE_UNITS = {
+    "b": 1, "kb": 1000, "kib": 1024,
+    "mb": 1000 ** 2, "mib": 1024 ** 2,
+    "gb": 1000 ** 3, "gib": 1024 ** 3,
+}
 
 # Mirrors installer/bootstrap.ps1: ffmpeg/ffprobe land next to the app folder
 # (install root), where tools.py already looks for them. The Windows build is a
@@ -191,7 +210,22 @@ def _log(library, message: str):
         library.logs.append(message[-2000:])
 
 
-def _tick(library, phase: str, stage: str | None, progress: int):
+def _bytes_from_size(value: str, unit: str) -> int:
+    """Convert a pip size token like ('12.3', 'MB') into an integer byte count."""
+    number = float(value.replace(",", ""))
+    return int(number * _SIZE_UNITS[unit.lower()])
+
+
+def _tick(library, phase: str, stage: str | None, progress: int, *,
+          received: int | None = None, total: int | None = None,
+          speed: float | None = None, clear_download: bool = False,
+          step_eta: float | None = None):
+    """Push phase/progress, and optionally live download bytes + bytes/sec.
+
+    ``clear_download`` drops the download_* fields (and step ETA) when leaving a
+    transfer — prepare/install/finalize call it so the UI does not keep a stale
+    MB/s from the previous stage.
+    """
     with library.lock:
         job = library.job
         if job is None or job.get("status") not in {"running", "cancelling"}:
@@ -199,6 +233,23 @@ def _tick(library, phase: str, stage: str | None, progress: int):
         job["phase"] = phase
         job["stage"] = stage
         job["progress"] = max(0, min(100, int(progress)))
+        if clear_download:
+            for key in ("download_received", "download_total", "download_speed"):
+                job.pop(key, None)
+            job["step_eta"] = None
+            job["step_eta_at"] = None
+            return
+        if received is not None:
+            job["download_received"] = int(received)
+        if total is not None:
+            job["download_total"] = int(total)
+        if speed is not None and speed > 0:
+            job["download_speed"] = float(speed)
+        if total and received is not None and total > 0:
+            job["step_progress"] = max(0, min(100, int(100 * received / total)))
+        if step_eta is not None:
+            job["step_eta"] = max(0.0, float(step_eta))
+            job["step_eta_at"] = time.time()
 
 
 def _ensure_pip(library) -> None:
@@ -277,30 +328,64 @@ def _install_ffmpeg(library, start_progress: int, band: int) -> int:
     if not _host_arch_ok():
         raise RuntimeError("Automatic FFmpeg setup is only available for x86-64 on Linux. "
                            "Install FFmpeg with your package manager and reopen the app.")
-    _tick(library, "download", "ffmpeg", start_progress)
+    _tick(library, "download", "ffmpeg", start_progress, clear_download=True)
     _log(library, f"Downloading FFmpeg from {ffmpeg_url()}…")
     with tempfile.TemporaryDirectory(prefix="unweave-ffmpeg-") as temporary:
         work = Path(temporary)
         archive = work / "ffmpeg.tar.xz" if sys.platform.startswith("linux") else work / "ffmpeg.zip"
-        with urlopen(ffmpeg_url(), timeout=60) as response, archive.open("wb") as stream:
-            length = response.headers.get("Content-Length")
-            expected = int(length) if length is not None else None
-            received = 0
-            while True:
-                if _cancelling(library):
-                    raise RuntimeError("Setup cancelled.")
-                block = response.read(1024 * 1024)
-                if not block:
-                    break
-                stream.write(block)
-                received += len(block)
-                if expected:
-                    pct = start_progress + int((received / expected) * band)
-                    _tick(library, "download", "ffmpeg", start_progress + min(band, pct - start_progress))
-                elif received % (32 * 1024 * 1024) == 0:
-                    _log(library, f"Downloaded {received // (1024 * 1024)} MiB…")
-        if expected is not None and received != expected:
-            raise RuntimeError("Incomplete FFmpeg download. Retry setup.")
+        # Cap runaway downloads (a misbehaving proxy once filled a disk with 16 GB
+        # "ffmpeg.zip" files). Abort past Content-Length, or 500 MB when unknown.
+        max_bytes = None
+        try:
+            with urlopen(ffmpeg_url(), timeout=60) as response, archive.open("wb") as stream:
+                length = response.headers.get("Content-Length")
+                expected = int(length) if length is not None else None
+                max_bytes = expected if expected is not None else 500 * 1024 * 1024
+                received = 0
+                started = time.monotonic()
+                last_report = 0.0
+                while True:
+                    if _cancelling(library):
+                        raise RuntimeError("Setup cancelled.")
+                    block = response.read(1024 * 1024)
+                    if not block:
+                        break
+                    stream.write(block)
+                    received += len(block)
+                    if received > max_bytes:
+                        raise RuntimeError("FFmpeg download was larger than expected")
+                    now = time.monotonic()
+                    elapsed = now - started
+                    # Throttle UI ticks; average speed from the whole transfer so far
+                    # so the number stays stable instead of bouncing on every chunk.
+                    if elapsed >= 0.25 and (now - last_report) >= 0.25:
+                        last_report = now
+                        speed = received / elapsed
+                        eta = ((expected - received) / speed) if expected and speed > 0 else None
+                        if expected:
+                            pct = start_progress + int((received / expected) * band)
+                            _tick(library, "download", "ffmpeg",
+                                  start_progress + min(band, pct - start_progress),
+                                  received=received, total=expected, speed=speed,
+                                  step_eta=eta)
+                        else:
+                            _tick(library, "download", "ffmpeg", start_progress,
+                                  received=received, speed=speed)
+                    elif expected is None and received % (32 * 1024 * 1024) == 0:
+                        _log(library, f"Downloaded {received // (1024 * 1024)} MiB…")
+                if expected is not None and received != expected:
+                    raise RuntimeError("Incomplete FFmpeg download. Retry setup.")
+                if received:
+                    elapsed = max(time.monotonic() - started, 1e-6)
+                    _tick(library, "download", "ffmpeg", start_progress + band,
+                          received=received, total=expected or received,
+                          speed=received / elapsed, step_eta=0)
+        except Exception:
+            try:
+                archive.unlink(missing_ok=True)
+            except OSError:
+                pass
+            raise
         install = ffmpeg_dir()
         install.mkdir(parents=True, exist_ok=True)
         if sys.platform.startswith("linux"):
@@ -310,13 +395,25 @@ def _install_ffmpeg(library, start_progress: int, band: int) -> int:
     if not ensure_ffmpeg_on_path():
         raise RuntimeError("FFmpeg was installed but could not be added to PATH.")
     _log(library, "FFmpeg installed.")
+    _tick(library, "install", "ffmpeg", start_progress + band, clear_download=True)
     return start_progress + band
+
+
+def _pip_progress_from_line(line: str) -> dict | None:
+    """Pull received/total/speed out of a pip download progress line, if any."""
+    match = _PIP_DOWNLOAD_RATE.search(line)
+    if not match:
+        return None
+    received = _bytes_from_size(match.group(1), match.group(3))
+    total = _bytes_from_size(match.group(2), match.group(3))
+    speed = float(_bytes_from_size(match.group(4), match.group(5)))
+    return {"received": received, "total": total, "speed": speed}
 
 
 def _pip_install(library, requirements: list[str], stage: str, start_progress: int, band: int,
                  *, force=False) -> int:
     """pip-install a requirement list, streaming progress through the job."""
-    _tick(library, "install", stage, start_progress)
+    _tick(library, "install", stage, start_progress, clear_download=True)
     quoted = " ".join(requirements)
     attempts = [["--force-reinstall"]] if force else [[]]
     if force:
@@ -331,8 +428,10 @@ def _pip_install(library, requirements: list[str], stage: str, start_progress: i
         # fall back to the shared per-user site (%APPDATA%\Python) that uninstall never
         # cleans and other Pythons also read. Install into the app's own folder instead.
         target = ["--prefix", str(packages_prefix()), "--no-warn-script-location"] if embedded_runtime() else []
+        # Force a progress bar so large wheels (torch) expose MB/s even when stdout
+        # is a pipe rather than a TTY — the UI reads those rate lines below.
         command = [sys.executable, "-m", "pip", "install", "--disable-pip-version-check",
-                   *target, *options, *requirements]
+                   "--progress-bar", "on", *target, *options, *requirements]
         process = popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                    text=True, errors="replace")
         with library.lock:
@@ -341,20 +440,48 @@ def _pip_install(library, requirements: list[str], stage: str, start_progress: i
                       "Successfully installed": 1.0}
         hit = {name: False for name in milestones}
         output = []
+        file_total = None
         try:
-            for line in process.stdout:
+            for raw in process.stdout:
                 if _cancelling(library):
                     stop_process(process)
                     raise RuntimeError("Setup cancelled.")
-                line = line.rstrip("\r\n")
-                if not line:
-                    continue
-                output.append(line)
-                _log(library, line)
-                for name, fraction in milestones.items():
-                    if not hit[name] and line.startswith(name):
-                        hit[name] = True
-                        _tick(library, "install", stage, start_progress + int(band * fraction))
+                # Progress bars rewrite the same line with \\r; split so each update
+                # can refresh download_speed without waiting for a newline.
+                for line in raw.replace("\r", "\n").split("\n"):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    start = _PIP_DOWNLOAD_START.match(line)
+                    if start:
+                        file_total = _bytes_from_size(start.group(2), start.group(3))
+                        output.append(line)
+                        _log(library, line)
+                        _tick(library, "download", stage,
+                              start_progress + int(band * 0.25),
+                              received=0, total=file_total)
+                        continue
+                    rate = _pip_progress_from_line(line)
+                    if rate:
+                        # Rate lines rewrite many times per second — update the
+                        # job, but keep them out of the transcript.
+                        total = rate["total"] or file_total
+                        eta = ((total - rate["received"]) / rate["speed"]
+                               if total and rate["speed"] > 0 else None)
+                        _tick(library, "download", stage,
+                              start_progress + int(band * 0.25),
+                              received=rate["received"], total=total,
+                              speed=rate["speed"], step_eta=eta)
+                        continue
+                    output.append(line)
+                    _log(library, line)
+                    for name, fraction in milestones.items():
+                        if not hit[name] and line.startswith(name):
+                            hit[name] = True
+                            clear = name != "Collecting"
+                            _tick(library, "install", stage,
+                                  start_progress + int(band * fraction),
+                                  clear_download=clear)
         finally:
             if process.poll() is None:
                 stop_process(process, force=True)
@@ -367,17 +494,24 @@ def _pip_install(library, requirements: list[str], stage: str, start_progress: i
         if retry and attempt + 1 < len(attempts):
             continue
         raise RuntimeError(f"pip install failed for {stage} (exit {code}). See the setup log.")
-    _tick(library, "install", stage, start_progress + band)
+    _tick(library, "install", stage, start_progress + band, clear_download=True)
     return start_progress + band
 
 
-def run_setup(library, stages: list[str]) -> None:
-    """Run the requested setup stages, one job, streaming progress as it goes."""
+def run_setup(library, stages: list[str], *, repair: bool = False) -> None:
+    """Run the requested setup stages, one job, streaming progress as it goes.
+
+    When ``repair`` is true, requested stages are reinstalled even if already present
+    (FFmpeg downloaded again; pip stages with ``--force-reinstall``).
+    """
     needed = [stage for stage in STAGE_ORDER if stage in stages]
-    missing = [stage for stage in needed
-               if (stage == "ffmpeg" and not ffmpeg_ok())
-               or (stage == "separation" and not separation_ok())
-               or (stage == "youtube" and not youtube_ok())]
+    if repair:
+        missing = list(needed)
+    else:
+        missing = [stage for stage in needed
+                   if (stage == "ffmpeg" and not ffmpeg_ok())
+                   or (stage == "separation" and not separation_ok())
+                   or (stage == "youtube" and not youtube_ok())]
     if not missing:
         with library.lock:
             job = library.job
@@ -388,48 +522,55 @@ def run_setup(library, stages: list[str]) -> None:
     band = (100 - FINALIZE_BAND) // max(1, len(missing))
     cursor = 0
     try:
-        _tick(library, "prepare", None, 0)
-        _log(library, "Checking what's already installed…")
+        _tick(library, "prepare", None, 0, clear_download=True)
+        _log(library, "Repairing installed components…" if repair else "Checking what's already installed…")
 
-        if "ffmpeg" in missing and not ffmpeg_ok():
+        if "ffmpeg" in missing and (repair or not ffmpeg_ok()):
+            if repair and ffmpeg_ok():
+                _log(library, "Re-downloading FFmpeg…")
             cursor = _install_ffmpeg(library, cursor, band)
-            _tick(library, "download", "ffmpeg", cursor)
+            _tick(library, "install", "ffmpeg", cursor, clear_download=True)
 
         _ensure_pip(library)
 
-        if "separation" in missing and not separation_ok():
+        if "separation" in missing and (repair or not separation_ok()):
             requirements = stage_requirements("separation")
             # A partial package can still expose audio_separator; force pip to replace
             # zeroed/interrupted files rather than saying "already satisfied".
-            repair = importlib.util.find_spec("audio_separator") is not None
-            if repair:
-                _log(library, "Repairing an incomplete separation engine install…")
-            cursor = _pip_install(library, requirements, "separation", cursor, band, force=repair)
-            _tick(library, "install", "separation", cursor)
+            force = repair or importlib.util.find_spec("audio_separator") is not None
+            if force:
+                _log(library, "Repairing the separation engine…" if repair
+                     else "Repairing an incomplete separation engine install…")
+            cursor = _pip_install(library, requirements, "separation", cursor, band, force=force)
+            _tick(library, "install", "separation", cursor, clear_download=True)
             problem = probe_separation()
             if problem:
                 raise RuntimeError(f"Separation engine could not be loaded after installation: {problem}")
 
-        if "youtube" in missing and not youtube_ok():
+        if "youtube" in missing and (repair or not youtube_ok()):
             requirements = stage_requirements("youtube")
-            repair = importlib.util.find_spec("yt_dlp") is not None
-            cursor = _pip_install(library, requirements, "youtube", cursor, band, force=repair)
-            _tick(library, "install", "youtube", cursor)
+            force = repair or importlib.util.find_spec("yt_dlp") is not None
+            if force and repair:
+                _log(library, "Repairing YouTube support…")
+            cursor = _pip_install(library, requirements, "youtube", cursor, band, force=force)
+            _tick(library, "install", "youtube", cursor, clear_download=True)
 
         # Finalize: make sure everything is actually usable now.
-        _tick(library, "finalize", None, min(100, cursor + FINALIZE_BAND))
+        _tick(library, "finalize", None, min(100, cursor + FINALIZE_BAND), clear_download=True)
         if not ensure_ffmpeg_on_path():
             raise RuntimeError(MISSING_FFMPEG)
         if "separation" in missing and not separation_ok():
             raise RuntimeError("Separation engine install did not take effect; restart the app and try again.")
         if "youtube" in missing and not youtube_ok():
             raise RuntimeError("YouTube support install did not take effect; restart the app and try again.")
-        _tick(library, "finalize", None, 100)
+        _tick(library, "finalize", None, 100, clear_download=True)
 
         with library.lock:
             job = library.job
             if job and job["status"] == "running":
                 job.update(status="succeeded", progress=100, phase="done", stage=None)
+                for key in ("download_received", "download_total", "download_speed"):
+                    job.pop(key, None)
     except Exception as error:
         with library.lock:
             job = library.job

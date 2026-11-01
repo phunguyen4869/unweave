@@ -84,31 +84,46 @@ def cached_download(url: str, destination: Path, expected_sha256: str | None = N
         except HTTPError as error:
             # audio-separator catches RuntimeError to try its fallback model URL.
             raise RuntimeError(f"Model download failed: {destination.name} (HTTP {error.code}).") from error
-        with response, download.open("wb") as stream:
-            length = response.headers.get("Content-Length")
-            expected_size = int(length) if length is not None else None
-            while block := response.read(1024 * 1024):
-                count += len(block)
-                if is_json and count > 20_000_000:
-                    raise RuntimeError("The model service returned oversized JSON.")
-                digest.update(block)
-                stream.write(block)
-                if count % (32 * 1024 * 1024) == 0:
-                    print(f"Downloaded {count // (1024 * 1024)} MiB", file=sys.stderr, flush=True)
-        if not count or expected_size is not None and count != expected_size:
-            raise RuntimeError(f"Incomplete model download: {destination.name}. Retry the separation.")
-        actual_hash = digest.hexdigest()
-        if expected_sha256 and actual_hash != expected_sha256:
-            raise RuntimeError(f"Model checksum verification failed: {destination.name}.")
-        if is_json and not _valid_json(download):
-            raise RuntimeError(f"Invalid model metadata: {destination.name}.")
-        # Publish after verification; leave any previous file untouched on error.
-        # Atomic replacement also avoids following a link introduced mid-download.
-        download.replace(destination)
-        if not expected_sha256 and not is_json:
-            checksum = work / "checksum"
-            checksum.write_text(actual_hash + "\n")
-            checksum.replace(receipt)
+        try:
+            with response, download.open("wb") as stream:
+                length = response.headers.get("Content-Length")
+                expected_size = int(length) if length is not None else None
+                # Cap runaway downloads: Content-Length when given, else 2 GB.
+                max_bytes = expected_size if expected_size is not None else 2 * 1024 * 1024 * 1024
+                if is_json:
+                    max_bytes = min(max_bytes, 20_000_000)
+                while block := response.read(1024 * 1024):
+                    count += len(block)
+                    if count > max_bytes:
+                        raise RuntimeError(
+                            "Model download was larger than expected"
+                            if not is_json else
+                            "The model service returned oversized JSON."
+                        )
+                    digest.update(block)
+                    stream.write(block)
+                    if count % (32 * 1024 * 1024) == 0:
+                        print(f"Downloaded {count // (1024 * 1024)} MiB", file=sys.stderr, flush=True)
+            if not count or expected_size is not None and count != expected_size:
+                raise RuntimeError(f"Incomplete model download: {destination.name}. Retry the separation.")
+            actual_hash = digest.hexdigest()
+            if expected_sha256 and actual_hash != expected_sha256:
+                raise RuntimeError(f"Model checksum verification failed: {destination.name}.")
+            if is_json and not _valid_json(download):
+                raise RuntimeError(f"Invalid model metadata: {destination.name}.")
+            # Publish after verification; leave any previous file untouched on error.
+            # Atomic replacement also avoids following a link introduced mid-download.
+            download.replace(destination)
+            if not expected_sha256 and not is_json:
+                checksum = work / "checksum"
+                checksum.write_text(actual_hash + "\n")
+                checksum.replace(receipt)
+        except Exception:
+            try:
+                download.unlink(missing_ok=True)
+            except OSError:
+                pass
+            raise
     return destination
 
 

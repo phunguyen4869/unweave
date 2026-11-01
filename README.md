@@ -122,6 +122,11 @@ It also stands on the work of these people and projects. The app downloads the m
 
 Song details lookup uses [MusicBrainz](https://musicbrainz.org) (core data CC0) and cover art from the [Cover Art Archive](https://coverartarchive.org), both run by the [MetaBrainz Foundation](https://metabrainz.org). Cover images belong to their respective copyright holders.
 
+## Contributing
+
+Want to help? See [CONTRIBUTING.md](CONTRIBUTING.md). Branch creation on this
+repository is limited to the maintainer; open pull requests from a fork.
+
 ## License
 
 MIT License - See [LICENSE](LICENSE) file for details.

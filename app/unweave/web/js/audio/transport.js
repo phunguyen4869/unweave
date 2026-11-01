@@ -1,7 +1,7 @@
-import {$, time, notice} from './core.js';
-import {store} from './store.js';
+import {$, time, notice} from '../core/core.js';
+import {store} from '../core/store.js';
 import {player, renderTracks, syncTrackControls} from './audio.js';
-import {t} from './i18n.js';
+import {t} from '../core/i18n.js';
 /* ---------- transport ---------- */
 $('play').onclick = () => player.playing || player.starting ? player.pause() : player.play().catch(e => notice(e.message, 'error'));
 $('restart').onclick = () => player.seek(0).catch(e => notice(e.message, 'error'));

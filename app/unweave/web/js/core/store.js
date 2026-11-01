@@ -11,5 +11,8 @@ export const store = {
   songPlanFor: null,
   splitEditor: null, splitRange: null, splitProject: null,
   exportPending: null, exportOffered: null,
+  settingsStorage: null, settingsStorageLoaded: false, settingsUpdates: null,
+  settingsCleanup: null, settingsCleanupLoaded: false,
+  settingsTab: 'general', clearingExports: null,
 };
 export const nav = {show() {}, selectProject() {}, refresh() {}, render() {}};

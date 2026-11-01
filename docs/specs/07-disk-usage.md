@@ -1,6 +1,6 @@
 # 07 — Disk usage, cache, and uninstall
 
-Status: Done (Phase 2 — FLAC stems, staging sweep, uninstall prompt, disk precheck; Linux purge, size UI and README note remain)
+Status: Done (Phase 2 — FLAC stems, staging sweep, uninstall prompt, disk precheck, Linux `--purge`, size/cleanup UI in settings)
 
 What this covers: everywhere the app writes to disk, what the realistic footprint is,
 where the genuine disk-abuse risks are, and what the uninstallers do and do not
@@ -108,9 +108,12 @@ It **never touches** `%LOCALAPPDATA%\Unweave` (models + config) or
 your ~455 MB of models and skips re-downloading. To fully clean up, the user must
 delete `%LOCALAPPDATA%\Unweave` manually.
 
-**Linux** (`installer/install-linux.sh --uninstall`) matches this exactly: it removes
+**Linux** (`installer/install-linux.sh --uninstall`) matches this intent: it removes
 the prefix, launcher, `.desktop` entry, and icon, and prints the three preserved paths
-so the user knows what remains.
+so the user knows what remains. When `PREFIX` is the default
+(`~/.local/share/unweave`, same folder as `CONFIG_DIR`), uninstall still keeps
+`ui.json` in place (remove everything else under the prefix, then restore settings).
+`--purge` removes models and `ui.json` after uninstall; projects are never touched.
 
 ## Planned change
 
@@ -119,16 +122,18 @@ so the user knows what remains.
    reads/writes FLAC via `soundfile`. Web player audio route serves `audio/flac` for `.flac`
    stems, `audio/wav` for legacy `.wav` stems. Backward compatible: existing `.wav` stems
    are still detected and played.
-2. **Offer to delete the model cache on uninstall** — done on Windows (NSIS prompt);
-   Linux `--purge` remains.
+2. **Offer to delete the model cache on uninstall** — done on Windows (NSIS prompt;
+   packages/ffmpeg/models/logs removal retries up to 5× with a 1 s pause for briefly
+   locked files); Linux `--purge` removes models + settings and prints what went.
 3. **Prune `guitar.wav` after a successful guitar split** — done implicitly: new projects
    store `guitar.flac` only when no split exists; once split into `lead.flac` + `rhythm.flac`,
    `guitar.flac` is excluded from the stem list. Legacy `guitar.wav` projects behave the same.
 4. **Add a disk-space precheck** before a job — done (see below).
 5. **Sweep stale staging directories at startup** — done in spec 06 (shared implementation:
    `Library.sweep_stale_staging()`, called at end of `Library.__init__`).
-6. **Surface sizes in the UI** — not done (see remaining work).
-7. **Document the 9x amplification** in the README — not done (see remaining work).
+6. **Surface sizes in the UI** — done in the Settings panel (spec 12): model cache
+   size, per-project totals, Clear models / Clear exports.
+7. **Document the 9x amplification** in the README — done ("How much space songs take").
 
 ### Canonical stems: WAV → FLAC (done)
 
@@ -150,7 +155,7 @@ Implemented:
 - `library.py`: separation CLI output checked as `.flac`; guitar-split input is whichever
   of `guitar.flac` / `guitar.wav` exists (`store.stem_file()`).
 - `server.py`: audio route serves `audio/flac` for `.flac` names, `audio/wav` otherwise.
-- `web/js/audio.js`: stem color lookup and guitar split button keyed on the stem name,
+- `web/js/audio/audio.js`: stem color lookup and guitar split button keyed on the stem name,
   ignoring `.flac` / `.wav`.
 
 Expected reduction: **~40–50% off stem storage on every project**.
@@ -160,15 +165,18 @@ Expected reduction: **~40–50% off stem storage on every project**.
 - [x] FLAC plays in the pywebview `<audio>` element; FLAC stems have shipped.
 - [x] Windows uninstall prompt: `Unweave.nsis` asks "Also delete the downloaded AI
       models (~500 MB) and app settings?" (default No; projects are never touched).
-- [ ] Linux `--purge` for `install-linux.sh --uninstall`. Small; bundle with the next
-      Linux installer change.
+      Packages / FFmpeg / models / logs removal retries up to 5 times (Sleep 1000)
+      when a file stays locked; one leftover-folder message if anything remains.
+- [x] Linux `--purge` for `install-linux.sh`: uninstall plus
+      `~/.cache/unweave/models` and `~/.local/share/unweave/ui.json`; never the
+      music/projects folder; prints exactly what it removed.
 - [x] Disk-space precheck (see below).
 - [x] Decided: old exports are **not** replaced wholesale. Deleting files the user
       exported, without asking, is riskier than the growth; a per-project "Clear
       exports" action belongs in the cleanup UI below.
-- [ ] Per-project / total size display and selective cleanup in the UI. Deferred
-      until users ask; `describe_project()` already returns `bytes` per stem, so a
-      per-project total is cheap when it is wanted.
+- [x] Per-project / total size display and selective cleanup in Settings
+      ([12 — Settings panel](12-settings-panel.md)): `GET /api/storage`,
+      `POST /api/storage/clear-models`, `POST /api/projects/<id>/clear-exports`.
 - [x] Stem sizes documented in the README ("How much space songs take").
 
 ### Disk-space precheck (done)

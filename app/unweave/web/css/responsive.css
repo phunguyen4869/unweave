@@ -6,7 +6,17 @@
 }
 @media (max-width: 980px) {
   .new-grid { grid-template-columns: minmax(0, 1fr); }
+  .setup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .setup-footer { flex-direction: column; align-items: stretch; }
+  .setup-actions { justify-content: flex-end; }
+  .settings-components { grid-template-columns: minmax(0, 1fr); }
+  .settings-storage-row { flex-direction: column; align-items: stretch; }
+  .settings-project-row { flex-direction: column; align-items: stretch; }
+  .settings-sidebar { width: 168px; }
   .progress-view:not(.compact) { grid-template-columns: 1fr; justify-items: center; }
   .progress-view:not(.compact) .pv-body { width: 100%; }
   .pv-steps { flex-wrap: wrap; }
+}
+@media (max-width: 640px) {
+  .setup-grid { grid-template-columns: minmax(0, 1fr); }
 }

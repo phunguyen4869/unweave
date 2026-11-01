@@ -15,6 +15,7 @@
 #   ./install-linux.sh --full          # also install PyTorch/audio-separator now
 #   ./install-linux.sh --no-deps       # skip the pip install (reinstall code only)
 #   ./install-linux.sh --uninstall     # remove the app (keeps models + your songs)
+#   ./install-linux.sh --purge         # uninstall + remove model cache and settings
 #   ./install-linux.sh --help
 
 set -euo pipefail
@@ -50,6 +51,7 @@ while [ $# -gt 0 ]; do
         --full) WITH_DEPS="full"; shift ;;
         --no-deps) WITH_DEPS="none"; shift ;;
         --uninstall) MODE="uninstall"; shift ;;
+        --purge) MODE="purge"; shift ;;
         -h|--help) usage ;;
         *) echo "Unknown option: $1 (try --help)" >&2; exit 2 ;;
     esac
@@ -74,17 +76,64 @@ refresh_desktop_db() {
 }
 
 uninstall() {
+    local quiet="${1:-}"
     say "Uninstalling $APP_NAME…"
-    rm -rf "$PREFIX"
+    # PREFIX defaults to the same folder as CONFIG_DIR. Spec 07: uninstall keeps
+    # settings (ui.json) and models; only --purge removes those.
+    if [ -d "$PREFIX" ]; then
+        if [ -f "$PREFIX/ui.json" ] && [ "$(cd "$PREFIX" && pwd -P)" = "$(cd "$CONFIG_DIR" && pwd -P)" ]; then
+            saved="$(mktemp)"
+            mv "$PREFIX/ui.json" "$saved"
+            rm -rf "$PREFIX"
+            mkdir -p "$PREFIX"
+            mv "$saved" "$PREFIX/ui.json"
+            echo "Kept $PREFIX/ui.json (settings)"
+        else
+            rm -rf "$PREFIX"
+        fi
+    fi
     rm -f "$BIN_DIR/unweave"
     rm -f "$DESKTOP_DIR/unweave.desktop"
     rm -f "$ICON_DIR/unweave.png"
     refresh_desktop_db
     ok "Removed the app, launcher and menu entry."
+    if [ "$quiet" != "quiet" ]; then
+        echo
+        echo "Kept (delete these yourself if you want a clean slate, or use --purge):"
+        echo "  $CONFIG_DIR/ui.json   (settings)"
+        echo "  $CACHE_DIR/models     (AI models, ~455 MB)"
+        echo "  $PROJECTS_DIR         (your separated songs)"
+    fi
+}
+
+purge() {
+    # Same as uninstall, then also drop the model cache and settings. Never touches
+    # the music/projects folder — that is the user's own separated songs.
+    # Call uninstall quietly so we don't claim settings/models were kept.
+    uninstall quiet
     echo
-    echo "Kept (delete these yourself if you want a clean slate):"
-    echo "  $CONFIG_DIR   (settings)"
-    echo "  $CACHE_DIR    (AI models, ~455 MB)"
+    say "Purging model cache and settings…"
+    local removed=0
+    if [ -e "$CACHE_DIR/models" ]; then
+        rm -rf "$CACHE_DIR/models"
+        echo "Removed $CACHE_DIR/models"
+        removed=1
+    fi
+    if [ -e "$CONFIG_DIR/ui.json" ]; then
+        rm -f "$CONFIG_DIR/ui.json"
+        echo "Removed $CONFIG_DIR/ui.json"
+        removed=1
+    fi
+    # Drop empty cache/config parents left behind, but never $PROJECTS_DIR.
+    rmdir "$CACHE_DIR" 2>/dev/null || true
+    if [ "$PREFIX" != "$CONFIG_DIR" ]; then
+        rmdir "$CONFIG_DIR" 2>/dev/null || true
+    fi
+    if [ "$removed" -eq 0 ]; then
+        echo "Nothing else to remove (models/settings were already gone)."
+    fi
+    echo
+    echo "Kept:"
     echo "  $PROJECTS_DIR (your separated songs)"
 }
 
@@ -236,9 +285,11 @@ EOF
     esac
     echo "Start it from your applications menu, or run: unweave"
     echo "Uninstall with: $SCRIPT_DIR/install-linux.sh --uninstall"
+    echo "Fully clean (keeps songs): $SCRIPT_DIR/install-linux.sh --purge"
 }
 
 case "$MODE" in
     uninstall) uninstall ;;
+    purge) purge ;;
     install) install ;;
 esac

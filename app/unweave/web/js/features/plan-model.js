@@ -9,7 +9,7 @@
               behaviour: grouping is destructive by construction
      dropped  not enabled at all; its audio is written nowhere
 */
-import {STEMS, DEFAULT_STEMS} from './constants.js';
+import {STEMS, DEFAULT_STEMS} from '../core/constants.js';
 
 export const STEM_ORDER = STEMS.map(([id]) => id);
 export const GROUP_STEM = 'other';

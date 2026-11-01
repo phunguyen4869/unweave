@@ -125,7 +125,31 @@ def make_server(library: Library, port: int = 8765):
                 stages = data.get("stages") or []
                 if not isinstance(stages, list) or not all(isinstance(stage, str) for stage in stages):
                     raise ValueError("Expected a list of stage names.")
-                return library.start_setup(stages)
+                return library.start_setup(stages, repair=bool(data.get("repair")))
+            if method == "GET" and path == "/api/storage":
+                return library.storage_info()
+            if method == "POST" and path == "/api/storage/clear-models":
+                self.json_body()  # require a POST body for CSRF-style same-origin habit
+                return library.clear_models()
+            if method == "GET" and path == "/api/cleanup":
+                return library.cleanup_info()
+            if method == "POST" and path == "/api/cleanup/scan":
+                self.json_body()
+                return library.run_cleanup_scan()
+            if method == "POST" and path == "/api/cleanup/run":
+                data = self.json_body()
+                ids = data.get("ids") if isinstance(data, dict) else None
+                if ids is not None and not isinstance(ids, list):
+                    raise ValueError("ids must be a list of leftover ids.")
+                return library.run_cleanup(ids)
+            if method == "POST" and path == "/api/cleanup/prefs":
+                return library.set_cleanup_prefs(self.json_body())
+            if method == "GET" and path == "/api/startup":
+                return library.startup_sections()
+            if method == "POST" and path == "/api/cleanup/start":
+                self.json_body()
+                library.start_background_cleanup()
+                return {"ok": True}
             if method == "GET" and path == "/api/folders":
                 folder = Path(query.get("path") or str(library.root or Path.home())).expanduser().resolve()
                 if not folder.is_dir():
@@ -221,6 +245,8 @@ def make_server(library: Library, port: int = 8765):
                         return {"ok": True}
                     if method == "POST" and len(parts) == 4 and parts[3] == "delete":
                         return library.delete(parts[2], data.get("root"))
+                    if method == "POST" and len(parts) == 4 and parts[3] == "clear-exports":
+                        return library.clear_exports(parts[2], data.get("root"))
                     audio_route = (method == "GET" and len(parts) == 5 and parts[3] == "audio")
                     original_route = (method == "GET" and len(parts) == 4 and parts[3] == "original")
                     if audio_route:

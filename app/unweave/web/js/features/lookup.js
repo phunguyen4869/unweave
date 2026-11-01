@@ -1,6 +1,6 @@
-import {$, el, api, token, fields} from './core.js';
-import {store} from './store.js';
-import {t} from './i18n.js';
+import {$, el, api, token, fields} from '../core/core.js';
+import {store} from '../core/store.js';
+import {t} from '../core/i18n.js';
 /* ---------- MusicBrainz lookup (edit dialog) ---------- */
 export function resetLookup(prefix) {
   store.lookupEpoch[prefix]++;

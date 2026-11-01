@@ -1,43 +1,61 @@
 # 12 — Settings panel
 
-Status: Backlog
+Status: Done
 
-What this covers: a single place to manage what Unweave has installed and stored. Not
-implemented; deliberately deferred until it has enough real content to justify a new
-screen.
+What this covers: a single place to manage what Unweave has installed and stored,
+plus About. Opened from the gear button in the app bar (next to language / theme).
 
-## Why not yet
+## Why it exists now
 
-Each current setting already lives where the user needs it:
+Storage cleanup (spec 07) and a way back into update checks after “Don’t ask again”
+(spec 10) finally give the screen enough real content. About lives here too, so one
+dialog replaces the old separate About popup. The Separate / Library surfaces keep
+their own shortcuts where they already lived.
 
-- YouTube support: the YouTube tab offers **Install YouTube support** when it is
-  missing, so skipping it at first-run setup is never a dead end.
-- Projects folder: **Change** under "Save to" (system folder picker) and the Library's
-  folder button.
-- Update check: the consent prompt, plus the manual **Check for updates**.
+## UI
 
-A settings screen that only repeats these adds a second route to the same buttons.
-Build it when at least two of the sections below exist.
+One modal `<dialog>` (~880×580, max 92vw / 88vh) with a fixed left sidebar (~200 px)
+and a scrolling content pane. Sidebar tabs, in order:
 
-## Sections (when built)
+| Tab | Content |
+|---|---|
+| General | Language (English / Tiếng Việt) and Projects folder (path, Default tag, Change → `openFolder()`, Use default). |
+| Components | Runtime, FFmpeg, separation engine, YouTube — installed state and size from `/api/state` `setup.stages`. Install / Repair call `/api/setup/start` for that stage (`repair: true` for Repair). No GPU row (spec 11 stays backlog). Runtime is installer-only. Shared card markup with first-run setup (`web/js/features/components.js`). |
+| Storage | Model cache size + Clear models; projects total; per-song sizes with Clear exports (existing confirm dialogs). Duplicate titles also show the folder name. **Leftover files** row (spec 13): last scan summary, Scan again, Clean up, auto switch. `/api/storage` and `/api/cleanup` are fetched only when this tab opens (and after a clear/scan), never from the 1 s render loop. |
+| Updates | Switch for automatic checks (`POST /api/updates/prefs` with `check: "auto"` / `"manual"`) and Check now (`checkForUpdatesManual`). |
+| About | Version, tagline, credits from `credits.js`, full-credits link, copyright/licence. Replaces the old `#about-dialog`. |
 
-| Section | Content | Depends on |
-|---|---|---|
-| Components | What is installed (separation engine, FFmpeg, YouTube, GPU) with sizes; install, repair or remove each | [11 — GPU](11-gpu-acceleration.md) for the GPU row |
-| Storage | Model cache size and "Clear models"; per-project and total sizes; "Clear exports" per project | [07 — Disk usage](07-disk-usage.md) cleanup UI |
-| Projects folder | Current folder, Change, Use default | Nothing new |
-| Updates | Turn automatic checks on or off again after "Don't ask again"; Check now | [10 — Updates](10-updates.md) |
-| Language | English / Tiếng Việt (today a title-bar toggle) | Nothing new |
+ARIA: `role=tablist` / `tab` / `tabpanel`, `aria-selected`, Up/Down arrows move tabs,
+Esc and × close. Last selected tab is remembered for the session. Usable during
+required first-run setup (language, folder, About) and while jobs run (destructive
+buttons stay disabled). Only component install chips refresh on the poll loop.
 
-## Constraints
+Strings are in `web/js/core/i18n.js` for `en` and `vi`. Verified at 1280×900 and the
+minimum window 1100×700, dark and light, both languages.
 
-- Removing a component must never touch projects (Documents) and must say what it
-  frees and what will need downloading again.
-- Cleanup follows spec 07: known locations only, never follow symlinks, never delete
-  what the user did not create through the app, and confirm before deleting.
-- English and Vietnamese strings for everything.
+## Repair
+
+`POST /api/setup/start` accepts `repair: true`. For the requested stages,
+`run_setup(..., repair=True)` reinstalls even when already present: FFmpeg is
+downloaded again; separation and YouTube use pip `--force-reinstall`. Shown as a
+normal setup job.
+
+## Backend
+
+- `GET /api/storage` — model cache and per-project byte totals (`Library.storage_info`).
+  Snapshot root / cache / project list under `Library.lock`, then size on disk
+  **without** the lock so `/api/state` polling stays responsive. `dir_bytes` skips
+  symlinks and Windows junctions.
+- `POST /api/storage/clear-models` — clears only the known models cache; refuses while
+  jobs run (check under the lock).
+- `POST /api/projects/<id>/clear-exports` — removes only that project’s `exports/`;
+  never stems or originals (check under the lock).
+
+Cleanup follows spec 07: known locations only, never follow symlinks/junctions,
+confirm in the UI before deleting.
 
 ## Related
 
 - [04 — First-run setup](04-first-run-setup.md), [07 — Disk usage](07-disk-usage.md),
-  [10 — Updates](10-updates.md), [11 — GPU acceleration](11-gpu-acceleration.md).
+  [10 — Updates](10-updates.md), [11 — GPU acceleration](11-gpu-acceleration.md),
+  [13 — Leftover clean-up](13-startup-cleanup.md).

@@ -1,8 +1,8 @@
 /* Stem-plan diagram for the advanced separation dialog.
    Rendering only: every rule lives in plan-model.js and every colour in plan.css,
    so this file holds no policy and no colour literals. */
-import {PLAN_META, STEMS, LEAVES} from './constants.js';
-import {t} from './i18n.js';
+import {PLAN_META, STEMS, LEAVES} from '../core/constants.js';
+import {t} from '../core/i18n.js';
 import {clone, createPlan, describePlan, isGrouped, setEnabled,
   setGrouped, setSplit, steps, toRequest, warnings} from './plan-model.js';
 

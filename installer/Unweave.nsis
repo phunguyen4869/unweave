@@ -36,13 +36,40 @@
 !include "MUI2.nsh"
 
 !define NAME "Unweave"
-!define VERSION "1.4.1"
+!define VERSION "1.5.0"
 !define PACKAGE_NAME "Unweave-Setup-x64"
 !define REG_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${NAME}"
 ; The app was called SoundRazer Desktop up to 1.2.2 (see .onInit).
 !define LEGACY_NAME "SoundRazer Desktop"
 !define LEGACY_REG_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${LEGACY_NAME}"
 !define ICON "..\assets\icon.ico"
+
+; Antivirus (and similar) can briefly lock files inside torch during uninstall.
+; Retry a few times before giving up; collect leftovers for one message at the end.
+Var UninstallLeftovers
+
+!macro RetryRemoveDir ID PATH
+  Push $0
+  Push $1
+  StrCpy $0 "${PATH}"
+  StrCpy $1 0
+  retry_rmdir_${ID}_loop:
+    IfFileExists "$0" 0 retry_rmdir_${ID}_gone
+    IntOp $1 $1 + 1
+    RMDir /r "$0"
+    IfFileExists "$0" 0 retry_rmdir_${ID}_gone
+    IntCmp $1 5 retry_rmdir_${ID}_fail
+    Sleep 1000
+    Goto retry_rmdir_${ID}_loop
+  retry_rmdir_${ID}_fail:
+    StrCmp $UninstallLeftovers "" 0 +3
+      StrCpy $UninstallLeftovers "$0"
+      Goto retry_rmdir_${ID}_gone
+    StrCpy $UninstallLeftovers "$UninstallLeftovers$\n$0"
+  retry_rmdir_${ID}_gone:
+  Pop $1
+  Pop $0
+!macroend
 
 ; Build the no-console launcher (launcher.nsi) first; the main section packs it.
 !system 'if not exist build mkdir build'
@@ -61,10 +88,18 @@ CRCCheck on
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_INSTFILES
+; Launch through Explorer so the app starts unelevated (the installer itself is admin).
+!define MUI_FINISHPAGE_RUN
+!define MUI_FINISHPAGE_RUN_FUNCTION LaunchAsUser
+!insertmacro MUI_PAGE_FINISH
 
 !insertmacro MUI_UNPAGE_INSTFILES
 
 !insertmacro MUI_LANGUAGE "English"
+
+Function LaunchAsUser
+  Exec '"$WINDIR\explorer.exe" "$INSTDIR\Unweave.exe"'
+FunctionEnd
 
 ; Replace a pre-rename install: move its data folder to the new name first (so the old
 ; uninstaller can't delete setup's ~1.6 GB of packages and nothing is downloaded again),
@@ -133,7 +168,7 @@ Section "${NAME}" SecMain
   WriteRegStr HKLM "${REG_KEY}" "Publisher" "um1chc5"
   WriteRegStr HKLM "${REG_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegDWORD HKLM "${REG_KEY}" "VersionMajor" 1
-  WriteRegDWORD HKLM "${REG_KEY}" "VersionMinor" 4
+  WriteRegDWORD HKLM "${REG_KEY}" "VersionMinor" 5
   WriteRegDWORD HKLM "${REG_KEY}" "NoModify" 1
   WriteRegDWORD HKLM "${REG_KEY}" "NoRepair" 1
 SectionEnd
@@ -173,14 +208,18 @@ Section "Uninstall"
   ; What first-run setup downloaded into the per-user app data folder is part of the
   ; app, so it always goes. Models and settings are the user's call (kept on /S);
   ; separated songs live in Documents and are never touched.
-  RMDir /r "$LOCALAPPDATA\${NAME}\packages"
-  RMDir /r "$LOCALAPPDATA\${NAME}\ffmpeg"
+  StrCpy $UninstallLeftovers ""
+  !insertmacro RetryRemoveDir packages "$LOCALAPPDATA\${NAME}\packages"
+  !insertmacro RetryRemoveDir ffmpeg "$LOCALAPPDATA\${NAME}\ffmpeg"
   MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 "Also delete the downloaded AI models (~500 MB) and app settings?$\n$\nYour separated songs are not affected." /SD IDNO IDNO keep_data
-    RMDir /r "$LOCALAPPDATA\${NAME}\models"
+    !insertmacro RetryRemoveDir models "$LOCALAPPDATA\${NAME}\models"
     Delete "$LOCALAPPDATA\${NAME}\ui.json"
     Delete "$LOCALAPPDATA\${NAME}\launch.log"
     ; Per-job process logs; without this the folder (and so the parent) survived "Yes".
-    RMDir /r "$LOCALAPPDATA\${NAME}\logs"
+    !insertmacro RetryRemoveDir logs "$LOCALAPPDATA\${NAME}\logs"
   keep_data:
   RMDir "$LOCALAPPDATA\${NAME}"
+  StrCmp $UninstallLeftovers "" uninstall_clean
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Some files were still in use and could not be removed:$\n$\n$UninstallLeftovers$\n$\nClose any programs using them, then delete the folder yourself." /SD IDOK
+  uninstall_clean:
 SectionEnd

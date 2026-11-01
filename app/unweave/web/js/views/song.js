@@ -1,12 +1,12 @@
-import {$, el, activeProject, jobPending, projectJob, findJob, queueBusy, api, notice, projectUrl, stemLabel} from '../core.js';
-import {store, nav} from '../store.js';
-import {renderProgress} from '../progress.js';
-import {pickerValue, pickerValid, loadPlan} from '../picker.js';
-import {loadAudio, player} from '../audio.js';
-import {coverImage} from '../covers.js';
-import {ORIGINAL_FILE, EXPORT_FORMATS} from '../constants.js';
-import {TrimEditor, trimRequest, sectionText, formatClock} from '../trim.js';
-import {t} from '../i18n.js';
+import {$, el, activeProject, jobPending, projectJob, findJob, queueBusy, api, notice, projectUrl, stemLabel} from '../core/core.js';
+import {store, nav} from '../core/store.js';
+import {renderProgress} from '../features/progress.js';
+import {pickerValue, pickerValid, loadPlan} from '../features/picker.js';
+import {loadAudio, player} from '../audio/audio.js';
+import {coverImage} from '../features/covers.js';
+import {ORIGINAL_FILE, EXPORT_FORMATS} from '../core/constants.js';
+import {TrimEditor, trimRequest, sectionText, formatClock} from '../audio/trim.js';
+import {t} from '../core/i18n.js';
 function storedTrim(project, duration) {
   const trim = project.separation?.trim;
   if (!trim || typeof trim !== 'object') return null;

@@ -1,6 +1,6 @@
-import {$, api, notice} from './core.js';
-import {store, nav} from './store.js';
-import {t} from './i18n.js';
+import {$, api, notice} from '../core/core.js';
+import {store, nav} from '../core/store.js';
+import {t} from '../core/i18n.js';
 /* ---------- Desktop window chrome (frameless pywebview only) ---------- */
 // Routed through our own HTTP API (POST/GET /api/window/<action>), same as everything
 // else in this app, rather than pywebview's JS bridge: window.pywebview never actually

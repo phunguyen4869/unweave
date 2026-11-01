@@ -24,7 +24,9 @@ or dismissed — not before the app is usable), show a light dialog once:
 | Choice | Persist | Behavior |
 |---|---|---|
 | Allow | `updates.check = "auto"` | Background check on launch (throttled) |
-| Not now, don’t ask again | `updates.check = "manual"` | Never auto-check; About → Check for updates only |
+| Not now, don’t ask again | `updates.check = "manual"` | Never auto-check; Settings → Updates → Check for updates only |
+
+Consent lives in the combined startup dialog (spec 13), not a separate About/updates popup.
 | Not now, ask again | `updates.check = "ask"` + `ask_again_at` (~7 days) | Show the same dialog on a later launch after that time |
 
 Store preference in the app config file next to other UI settings
@@ -40,7 +42,7 @@ No network call until **Allow** or an explicit manual check.
   `updates.last_checked_at`).
 - Source of truth: GitHub Releases API for this repo’s latest stable release
   (`/repos/um1chc5/unweave/releases/latest` — ignores drafts and prereleases).
-- Compare to the running app version from `/api/state` → `version` (same as About).
+- Compare to the running app version from `/api/state` → `version` (same as Settings → About).
 - Semver-ish compare for shipped tags (`1.3.1`); do not treat a failed
   network call as “up to date” — stay quiet for auto, show a soft error only
   when the user asked.
@@ -56,7 +58,7 @@ No network call until **Allow** or an explicit manual check.
 
 ## Manual check
 
-- Entry point: About dialog → **Check for updates**.
+- Entry point: Settings → Updates → **Check for updates** (About tab stays credits/version only).
 - Always allowed regardless of consent mode.
 - If already on latest: short “You’re up to date” notice.
 - If newer: same non-blocking update banner as auto check.
@@ -73,8 +75,9 @@ No network call until **Allow** or an explicit manual check.
 - Backend: [`app/unweave/updates.py`](../../app/unweave/updates.py) (compare + fetch);
   prefs / check on `Library` in [`webui/library.py`](../../app/unweave/webui/library.py);
   routes `GET /api/updates/status`, `POST /api/updates/prefs`, `POST /api/updates/check`.
-- Frontend: [`web/js/updates.js`](../../app/unweave/web/js/updates.js) — consent dialog,
-  start-of-session auto check when `auto`, About manual button, update banner.
+- Frontend: [`web/js/chrome/updates.js`](../../app/unweave/web/js/chrome/updates.js) — startup-dialog
+  updates section (shared with leftover clean-up, spec 13), start-of-session auto check when
+  `auto`, Settings → Updates manual button, update banner.
 - Tests: [`tests/test_updates.py`](../../tests/test_updates.py).
 
 ## Out of scope (this spec)
@@ -88,14 +91,15 @@ No network call until **Allow** or an explicit manual check.
 
 - [x] Consent dialog + don’t-ask-again persistence in app config
 - [x] Auto check throttled to ≤1 / 24 h when allowed
-- [x] Manual check from About
+- [x] Manual check from Settings → Updates
 - [x] Newer-version banner with open-release CTA
 - [x] No network before consent / manual action
-- [x] Spec board + About copy (en/vi)
+- [x] Spec board + Settings / About copy (en/vi)
 
 ## Related
 
 - [04 — First-run setup](04-first-run-setup.md) — show update consent after the app is usable,
   not ahead of required setup.
 - [01 — App specification](01-app.md) — About / version surface.
+- [12 — Settings panel](12-settings-panel.md) — Updates and About tabs.
 - [desktop-app.md](../desktop-app.md) — how releases are packaged and published.

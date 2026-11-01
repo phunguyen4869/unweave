@@ -1,12 +1,13 @@
-import {$, notice, api, activeJob, jobRunning, activeProject, setClockSkew} from './core.js';
-import {store, nav} from './store.js';
-import {clearAudio} from './audio.js';
-import {renderNew, continuePending} from './views/new.js';
-import {renderLibrary} from './views/library.js';
-import {renderSong} from './views/song.js';
-import {renderSetup, renderSetupView, renderSetupBanner} from './views/setup.js';
-import {t, onLangChange} from './i18n.js';
-import {jobWhat, openQueue, renderQueue} from './queue.js';
+import {$, notice, api, activeJob, jobRunning, activeProject, setClockSkew} from '../core/core.js';
+import {store, nav} from '../core/store.js';
+import {clearAudio} from '../audio/audio.js';
+import {renderNew, continuePending} from '../views/new.js';
+import {renderLibrary} from '../views/library.js';
+import {renderSong} from '../views/song.js';
+import {renderSetup, renderSetupView, renderSetupBanner} from '../views/setup.js';
+import {refreshSettingsOpen} from '../views/settings.js';
+import {t, onLangChange} from '../core/i18n.js';
+import {jobWhat, openQueue, renderQueue} from '../features/queue.js';
 function clearSongTrim() {
   store.songTrimEditor?.destroy();
   store.songTrimEditor = null;
@@ -35,7 +36,7 @@ export function selectProject(id) {
   if (store.selected === id && store.view === 'song') return;
   clearSongTrim();
   store.selected = id; store.resepOpen = false; store.view = 'song';
-  for (const v of ['new', 'library', 'song']) $(`view-${v}`).hidden = v !== 'song';
+  for (const v of ['new', 'library', 'song', 'setup']) $(`view-${v}`).hidden = v !== 'song';
   $('tab-new').setAttribute('aria-selected', 'false'); $('tab-library').setAttribute('aria-selected', 'true');
   $('song-stems').dataset.preset = '';
   render();
@@ -50,6 +51,8 @@ export function render() {
   // (and so never running this gate at all) — so first-run setup never actually appeared.
   if (store.state.setup?.required && !store.setupDeclined && store.view !== 'setup') { show('setup'); return; }
   renderChrome(); renderNew(); renderLibrary(); renderSong(); renderSetup(); renderSetupView(); renderSetupBanner();
+  // Settings is a dialog: only refresh component install chips while it is open.
+  refreshSettingsOpen();
 }
 export function renderChrome() {
   $('project-count').textContent = store.state.projects.length;

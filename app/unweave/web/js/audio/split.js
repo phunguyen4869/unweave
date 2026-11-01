@@ -1,7 +1,7 @@
-import {$, el, notice, api, projectUrl, jobPending, projectJob} from './core.js';
-import {store, nav} from './store.js';
+import {$, el, notice, api, projectUrl, jobPending, projectJob} from '../core/core.js';
+import {store, nav} from '../core/store.js';
 import {TrimEditor, trimRequest, sectionText} from './trim.js';
-import {t} from './i18n.js';
+import {t} from '../core/i18n.js';
 
 function renderChip(offset) {
   const chip = $('split-chip');

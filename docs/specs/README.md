@@ -11,13 +11,14 @@ Unweave is a local desktop stem separator with a Python backend and vanilla ES-m
 | 03 | [Output formats](03-output-formats.md) | Done | Export job, six-format FFmpeg matrix, staging, manifest, reveal route, dialog, and progress are implemented. Canonical stored stems are FLAC (lossless, ~40–50% smaller than WAV). |
 | 04 | [First-run setup](04-first-run-setup.md) | Doing | Installer ships the runtime; consent, checklist, per-stage progress and gating run in-app (no console step). Remaining: visual merge of setup into the main UI, fresh Program Files install test, release. |
 | 05 | [Job queue and concurrency](05-job-queue.md) | Done | Jobs queue and run one at a time on CPU (derived cap: 3 on a CUDA build, RAM-capped, env override). Decided: no concurrency setting, no queue depth cap. |
-| 06 | [Close behavior](06-close-behavior.md) | Done | Confirm-on-close, clean cancel of the whole process tree (Windows Job Object kill-on-close), stale-staging sweep. Queued jobs are cancelled on close. Job-state persistence deferred. |
-| 07 | [Disk usage and cache](07-disk-usage.md) | Done (Phase 2) | FLAC stems, staging sweep, Windows uninstall model prompt, disk-space precheck before separation/export/import. Stem sizes documented in the README. Remaining: Linux `--purge`, size/cleanup UI. |
+| 06 | [Close behavior](06-close-behavior.md) | Done | Confirm-on-close, clean cancel of the whole process tree (Windows Job Object kill-on-close), stale-staging sweep via the shared leftover scanner (spec 13). Queued jobs are cancelled on close. Job-state persistence deferred. |
+| 07 | [Disk usage and cache](07-disk-usage.md) | Done (Phase 2) | FLAC stems, staging sweep, Windows uninstall model prompt with locked-file retries, Linux `--uninstall` keeps `ui.json` when PREFIX==CONFIG_DIR, `--purge` removes models+settings (message lists only songs), disk-space precheck, Settings size/cleanup UI. Stem sizes documented in the README. |
 | 08 | [Performance and hidden optimizations](08-performance.md) | Done (Items 1–2) | CPU-derived threads, no redundant stem copy, no torch import in the UI process. Parallel jobs share the cores. Remaining: real guitar-split thread benchmark; GPU path is backlog spec 11. |
 | 09 | [Job progress and ETA](09-job-progress.md) | Done | Overall `%` is elapsed+ETA weighted (≈10× prior only before guitar runs); detail panel is step-first (`step_eta`, pass caption, “Whole job” line); soft advanced-plan warning when lead/rhythm split is on. |
-| 10 | [In-app update check](10-updates.md) | Done | First-launch consent (Allow / Not now + don’t ask again); throttled GitHub Releases check; banner + open download; no auto-install. |
+| 10 | [In-app update check](10-updates.md) | Done | First-launch consent in the shared startup dialog (spec 13); throttled GitHub Releases check; banner + open download; manual check from Settings → Updates; no auto-install. |
 | 11 | [GPU acceleration](11-gpu-acceleration.md) | Backlog | Opt-in CUDA build of PyTorch for NVIDIA users; guitar split and Demucs on the GPU with CPU fallback and a VRAM-aware job cap. Needs an NVIDIA machine to build and test. |
-| 12 | [Settings panel](12-settings-panel.md) | Backlog | One place for components, storage cleanup, projects folder, update checks and language. Deferred until at least two sections have real content. |
+| 12 | [Settings panel](12-settings-panel.md) | Done | Gear opens a sidebar dialog (General / Components / Storage / Updates / About). Repair reinstalls; storage sizes outside Library.lock; Storage leftover row from spec 13. No GPU row (spec 11 stays backlog). |
+| 13 | [Leftover clean-up and startup dialog](13-startup-cleanup.md) | Done | Shared scanner (`cleanup.py`); download caps; project-local `input.wav`; silent &lt;50 MB / dialog ≥50 MB; Settings → Storage leftover row; NSIS “Run Unweave now” via Explorer; `UNWEAVE_CLEANUP_TEMP` for safe testing. |
 | — | Web module/CSS refactor | Done | ES modules are under `web/js/`; six CSS files are under `web/css/`; static serving uses generic safe handling. |
 | — | Python package refactor | Done | Split into `audio/`, `projects/`, and `webui/` is complete; package-layout smoke tests pass. |
 
@@ -38,6 +39,7 @@ The status board is the single source of truth: **Done** means the described beh
 9. [09 — Job progress and ETA](09-job-progress.md)
 10. [10 — In-app update check](10-updates.md)
 11. [11 — GPU acceleration](11-gpu-acceleration.md) (backlog)
-12. [12 — Settings panel](12-settings-panel.md) (backlog)
+12. [12 — Settings panel](12-settings-panel.md)
+13. [13 — Leftover clean-up and startup dialog](13-startup-cleanup.md)
 
 See the [docs index](../README.md) for architecture, project overview, and desktop packaging documentation.

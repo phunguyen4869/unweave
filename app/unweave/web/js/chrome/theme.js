@@ -1,5 +1,5 @@
-import {$} from './core.js';
-import {t, onLangChange} from './i18n.js';
+import {$} from '../core/core.js';
+import {t, onLangChange} from '../core/i18n.js';
 
 const THEME_KEY = 'unweave-theme';
 const LEGACY_THEME_KEY = 'sound-razor-theme';

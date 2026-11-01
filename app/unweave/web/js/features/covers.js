@@ -1,6 +1,6 @@
-import {store} from './store.js';
-import {$, token, el, projectUrl} from './core.js';
-import {t} from './i18n.js';
+import {store} from '../core/store.js';
+import {$, token, el, projectUrl} from '../core/core.js';
+import {t} from '../core/i18n.js';
 export async function coverImage(container, project) {
   const key = JSON.stringify([store.state.root, project.id, project.cover]);
   if (container.dataset.coverKey === key) return;

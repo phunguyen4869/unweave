@@ -1,18 +1,19 @@
 // Importing feature modules installs their DOM handlers; theme.js applies the saved theme first.
-import {initThemeToggle} from './theme.js';
-import {initNavigation} from './navigation.js';
-import {initTitlebar} from './window.js';
-import './transport.js';
-import './dialogs.js';
-import './folders.js';
-import './lookup.js';
-import './credits.js';
-import {nav} from './store.js';
-import {queueBusy, notice} from './core.js';
-import {animate} from './audio.js';
-import {t} from './i18n.js';
-import {initLangToggle} from './lang-toggle.js';
-import {considerUpdates} from './updates.js';
+import {initThemeToggle} from './chrome/theme.js';
+import {initNavigation} from './chrome/navigation.js';
+import {initTitlebar} from './chrome/window.js';
+import './audio/transport.js';
+import './features/dialogs.js';
+import './features/folders.js';
+import './views/settings.js';
+import './features/lookup.js';
+import './chrome/credits.js';
+import {nav} from './core/store.js';
+import {queueBusy, notice} from './core/core.js';
+import {animate} from './audio/audio.js';
+import {t} from './core/i18n.js';
+import {initLangToggle} from './chrome/lang-toggle.js';
+import {considerUpdates} from './chrome/updates.js';
 
 // Late-bind the hooks only after every module has evaluated, then initialize the
 // remaining page chrome before the initial state poll starts.

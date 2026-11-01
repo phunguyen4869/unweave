@@ -1,5 +1,5 @@
-import {$} from './core.js';
-import {t, getLang, setLang} from './i18n.js';
+import {$} from '../core/core.js';
+import {t, getLang, setLang, onLangChange} from '../core/i18n.js';
 
 function syncButton() {
   const lang = getLang();
@@ -10,6 +10,7 @@ function syncButton() {
 }
 
 export function initLangToggle() {
-  $('lang-toggle').onclick = () => { setLang(getLang() === 'vi' ? 'en' : 'vi'); syncButton(); };
+  $('lang-toggle').onclick = () => { setLang(getLang() === 'vi' ? 'en' : 'vi'); };
+  onLangChange(syncButton);
   syncButton();
 }

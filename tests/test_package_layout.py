@@ -35,8 +35,8 @@ class PackageLayoutTests(unittest.TestCase):
     def test_static_assets(self):
         static = Path(server.__file__).resolve().parents[1] / "web"
         self.assertEqual(server.STATIC, static)
-        for name in ("index.html", "js/app.js", "js/trim.js", "js/split.js", "js/updates.js",
-                     "css/base.css"):
+        for name in ("index.html", "js/app.js", "js/audio/trim.js", "js/audio/split.js",
+                     "js/chrome/updates.js", "js/views/settings.js", "css/base.css"):
             with self.subTest(asset=name):
                 self.assertTrue((static / name).is_file())
 

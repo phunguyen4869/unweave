@@ -1,7 +1,7 @@
-import {$, api, notice, activeProject, sep, projectUrl, fields} from './core.js';
-import {store, nav} from './store.js';
+import {$, api, notice, activeProject, sep, projectUrl, fields} from '../core/core.js';
+import {store, nav} from '../core/store.js';
 import {resetLookup} from './lookup.js';
-import {t} from './i18n.js';
+import {t} from '../core/i18n.js';
 /* ---------- edit / delete ---------- */
 $('edit-open').onclick = () => {
   const p = activeProject(); if (!p) return; store.editing = {id: p.id, root: store.state.root};

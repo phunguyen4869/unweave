@@ -1,7 +1,8 @@
-import {SETUP_STEPS, YOUTUBE_STEPS, GUITAR_STEPS, SEPARATION_STEPS, SEPARATION_SPLIT_STEPS, EXPORT_STEPS, SETUP_STAGE_LABEL, SETUP_PHASE_TITLE, SETUP_PHASE_SUB} from './constants.js';
-import {$, el, api, notice, serverNow, duration} from './core.js';
-import {store, nav} from './store.js';
-import {t, onLangChange} from './i18n.js';
+import {SETUP_STEPS, YOUTUBE_STEPS, GUITAR_STEPS, SEPARATION_STEPS, SEPARATION_SPLIT_STEPS, EXPORT_STEPS, SETUP_STAGE_LABEL, SETUP_PHASE_TITLE, SETUP_PHASE_SUB} from '../core/constants.js';
+import {$, el, api, notice, serverNow, duration} from '../core/core.js';
+import {store, nav} from '../core/store.js';
+import {t, onLangChange} from '../core/i18n.js';
+import {byteText, speedText} from './components.js';
 /* ---------- progress view ---------- */
 export function buildProgress(panel) {
   panel.innerHTML = `
@@ -100,6 +101,14 @@ export function renderProgress(panel, job) {
     const phaseSubs = {prepare: t(SETUP_PHASE_SUB.prepare), download: t(SETUP_PHASE_SUB.download), install: t(SETUP_PHASE_SUB.install), finalize: t(SETUP_PHASE_SUB.finalize)};
     title = job.status === 'cancelling' ? t('progress.stopping') : running ? phaseTitles[phase] || t('progress.working') : (job.status === 'succeeded' ? t('setup.phase.completeTitle') : t('setup.phase.failedTitle'));
     sub = running ? phaseSubs[phase] || '' : job.error || (job.status === 'succeeded' ? t('setup.phase.readyNowSub') : '');
+    if (running && (phase === 'download' || job.download_speed)) {
+      const speed = speedText(job.download_speed);
+      const received = byteText(job.download_received);
+      const total = byteText(job.download_total);
+      if (speed && received && total) sub = t('setup.phase.download.subSpeed', {received, total, speed});
+      else if (speed && received) sub = t('setup.phase.download.subSpeedPartial', {received, speed});
+      else if (speed) sub = t('setup.phase.download.subSpeedOnly', {speed});
+    }
   } else if (exportJob) {
     const titles = {prepare: t('export.phase.prepare.title'), export: t('export.phase.export.title'), finalize: t('export.phase.finalize.title')};
     const ended = {succeeded: t('export.phase.complete'), failed: t('export.phase.failed'), cancelled: t('progress.cancelled')};

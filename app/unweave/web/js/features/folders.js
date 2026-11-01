@@ -1,6 +1,6 @@
-import {$, el, api, notice} from './core.js';
-import {store, nav} from './store.js';
-import {t} from './i18n.js';
+import {$, el, api, notice} from '../core/core.js';
+import {store, nav} from '../core/store.js';
+import {t} from '../core/i18n.js';
 /* ---------- output folder ---------- */
 export async function browse(path) {
   const data = await api(`/api/folders?path=${encodeURIComponent(path || '')}`);

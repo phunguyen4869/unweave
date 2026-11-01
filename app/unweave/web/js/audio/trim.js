@@ -1,5 +1,5 @@
-import {el} from './core.js';
-import {t} from './i18n.js';
+import {el} from '../core/core.js';
+import {t} from '../core/i18n.js';
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 

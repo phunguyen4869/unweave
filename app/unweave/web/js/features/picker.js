@@ -1,7 +1,7 @@
-import {STEMS, DEFAULT_STEMS} from './constants.js';
-import {$, el} from './core.js';
-import {nav} from './store.js';
-import {t, onLangChange} from './i18n.js';
+import {STEMS, DEFAULT_STEMS} from '../core/constants.js';
+import {$, el} from '../core/core.js';
+import {nav} from '../core/store.js';
+import {t, onLangChange} from '../core/i18n.js';
 import {fromRequest, fromSelection, describePlan} from './plan-model.js';
 import {openPlanDialog} from './plan.js';
 

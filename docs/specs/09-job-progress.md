@@ -61,8 +61,8 @@ Note under the bar:
 - Dual-pass with a measured estimate: `Done in about {time}` from `eta` / `eta_at`.
 - Single-pass (`pass_count === 1`): hide the note and the ring caption.
 
-Implemented in [`progress.js`](../../app/unweave/web/js/progress.js); strings in
-[`i18n.js`](../../app/unweave/web/js/i18n.js).
+Implemented in [`progress.js`](../../app/unweave/web/js/features/progress.js); strings in
+[`i18n.js`](../../app/unweave/web/js/core/i18n.js).
 
 ## Current behavior (time-weighted overall)
 
@@ -117,8 +117,8 @@ plan dialog. When lead/rhythm split is on, `#plan-warning` also shows a soft
 `plan.warn.splitSlow` note (en/vi). It does **not** modal or disable Start (only a
 silent/empty plan disables confirm).
 
-Implemented in [`plan-model.js`](../../app/unweave/web/js/plan-model.js)
-`warnings()` and [`i18n.js`](../../app/unweave/web/js/i18n.js).
+Implemented in [`plan-model.js`](../../app/unweave/web/js/features/plan-model.js)
+`warnings()` and [`i18n.js`](../../app/unweave/web/js/core/i18n.js).
 
 ## Implementation checklist
 

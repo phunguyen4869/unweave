@@ -1,6 +1,6 @@
-import {$, el, api, notice} from './core.js';
-import {store, nav} from './store.js';
-import {t, onLangChange} from './i18n.js';
+import {$, el, api, notice} from '../core/core.js';
+import {store, nav} from '../core/store.js';
+import {t, onLangChange} from '../core/i18n.js';
 /* ---------- job queue dialog (opened from the job pill) ---------- */
 export function jobWhat(job) {
   return job.kind === 'youtube' ? t('nav.downloading') : job.kind === 'setup' ? t('nav.settingUp')

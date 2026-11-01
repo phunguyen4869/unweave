@@ -234,7 +234,7 @@ is **relative to `guitar.wav`**, as in §5.4.
 
 ## 6. Section-only playback
 
-### 6.1 `web/js/audio.js`
+### 6.1 `web/js/audio/audio.js`
 
 - `describe_project()` offsets remain absolute project time.
 - When `separation.trim` is valid and the original is loaded, the player converts
@@ -265,7 +265,7 @@ is **relative to `guitar.wav`**, as in §5.4.
 
 The visual design belongs to the designer; these are the required behaviours.
 The interaction is implemented in `web/js/views/new.js` and
-`web/js/views/song.js`; shared transport scheduling is in `web/js/audio.js`.
+`web/js/views/song.js`; shared transport scheduling is in `web/js/audio/audio.js`.
 
 ### 7.1 Overall separation
 
@@ -400,7 +400,7 @@ separation, not only on “Separate again”:
 | `projects/store.py` | Validate trim, add `offset` to stem dicts. |
 | `webui/library.py` | `start(trim=...)`, validation, CLI args, job handling. |
 | `webui/server.py` | Trim request routes and validation responses. |
-| `web/js/audio.js` | Per-track offset scheduling. |
+| `web/js/audio/audio.js` | Per-track offset scheduling. |
 | `web/js/views/new.js` | First-separation trim editor and request body. |
 | `web/js/views/song.js` | Re-separation/split trim UI, seek-to-section, status line. |
 | `web/css/song.css` (or closest target stylesheet) | Selection overlay, handles, dialog. |

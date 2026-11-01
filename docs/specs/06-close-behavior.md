@@ -69,11 +69,16 @@ Why not resume:
 
 In priority order, as spec'd:
 
-1. **Warn before closing while a job runs** — the close button (`$('win-close')`) calls `/api/window/close`; if a job is running and no `confirm` flag is sent, the backend returns `{"confirm": true, "message": "..."}`. The frontend shows the `close-confirm-dialog` and only re-sends close with `{confirm: true}` after the user confirms. Implemented in `web/js/window.js` and `webui/library.py` `window_action("close")`.
+1. **Warn before closing while a job runs** — the close button (`$('win-close')`) calls `/api/window/close`; if a job is running and no `confirm` flag is sent, the backend returns `{"confirm": true, "message": "..."}`. The frontend shows the `close-confirm-dialog` and only re-sends close with `{confirm: true}` after the user confirms. Implemented in `web/js/chrome/window.js` and `webui/library.py` `window_action("close")`.
 
 2. **Cancel cleanly on close** — confirmed close calls `library.cancel()`, cancels all queued jobs, clears the queue, then closes the window. Implemented in `webui/library.py`. Every child is started and stopped through `unweave/processes.py` (`popen()` / `stop()`): on POSIX the whole process group is signalled (`SIGTERM`, then `SIGKILL` after 5 s); on Windows each child runs in a Job Object marked kill-on-close, so cancel ends the CLI *and* anything it started (FFmpeg, yt-dlp's FFmpeg), and the tree also dies if the app itself crashes or is ended from Task Manager. Before this, Windows `terminate()` stopped only the direct child; verified on Windows 11 that the old path left a grandchild running and the new one leaves none, for both cancel and a hard-killed host.
 
-3. **Sweep stale staging directories on startup** — `Library.sweep_stale_staging()` removes `.separation-*`, `.youtube-*`, `.import-*`, `.exports-*`, `.guitar-split-*`, `.stems-*`, `.model-download-*` directories older than 24 h under the projects root. Only known prefixes, never follows symlinks, never outside the projects root. Called at end of `Library.__init__`. Implemented in `webui/library.py`.
+3. **Sweep stale staging directories on startup** — `Library.sweep_stale_staging()` is a
+   caller of `unweave/cleanup.py`: it removes known interrupted-job and model-download
+   leftovers older than 24 h under the projects root, each project folder, and the model
+   cache (never system temp — large temp leftovers go through the startup dialog in
+   [13 — Leftover clean-up](13-startup-cleanup.md)). Never follows symlinks/junctions.
+   Called at end of `Library.__init__`.
 
 4. **Persist minimal job state** — not implemented (deferred, see remaining work).
 

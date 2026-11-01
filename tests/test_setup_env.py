@@ -134,6 +134,125 @@ class SetupHealthTests(unittest.TestCase):
         self.assertIn("--ignore-installed", commands[1])
         self.assertTrue(any("Damaged package metadata" in line for line in library.logs))
 
+    def test_repair_reinstalls_present_ffmpeg(self):
+        library = SimpleNamespace(lock=threading.Lock(), logs=[], process=None,
+                                  job={"status": "running", "progress": 0})
+        installs = []
+
+        def fake_install(_library, start, band):
+            installs.append("ffmpeg")
+            return start + band
+
+        with patch.object(setup_env, "ffmpeg_ok", return_value=True), \
+             patch.object(setup_env, "_install_ffmpeg", side_effect=fake_install), \
+             patch.object(setup_env, "_ensure_pip"), \
+             patch.object(setup_env, "ensure_ffmpeg_on_path", return_value=True):
+            setup_env.run_setup(library, ["ffmpeg"], repair=True)
+
+        self.assertEqual(installs, ["ffmpeg"])
+        self.assertEqual(library.job["status"], "succeeded")
+
+    def test_repair_force_reinstalls_present_pip_stage(self):
+        library = SimpleNamespace(lock=threading.Lock(), logs=[], process=None,
+                                  job={"status": "running", "progress": 0})
+        pip_calls = []
+
+        def fake_pip(_library, requirements, stage, start, band, *, force=False):
+            pip_calls.append({"stage": stage, "force": force, "requirements": list(requirements)})
+            return start + band
+
+        with patch.object(setup_env, "youtube_ok", return_value=True), \
+             patch.object(setup_env, "ffmpeg_ok", return_value=True), \
+             patch.object(setup_env, "_ensure_pip"), \
+             patch.object(setup_env, "ensure_ffmpeg_on_path", return_value=True), \
+             patch.object(setup_env, "_pip_install", side_effect=fake_pip), \
+             patch.object(setup_env, "stage_requirements", return_value=["yt-dlp"]):
+            setup_env.run_setup(library, ["youtube"], repair=True)
+
+        self.assertEqual(len(pip_calls), 1)
+        self.assertEqual(pip_calls[0]["stage"], "youtube")
+        self.assertTrue(pip_calls[0]["force"])
+        self.assertEqual(library.job["status"], "succeeded")
+
+    def test_without_repair_skips_present_ffmpeg(self):
+        library = SimpleNamespace(lock=threading.Lock(), logs=[], process=None,
+                                  job={"status": "running", "progress": 0})
+
+        def boom(*_args, **_kwargs):
+            raise AssertionError("installer should not run when stage is already present")
+
+        with patch.object(setup_env, "ffmpeg_ok", return_value=True), \
+             patch.object(setup_env, "_install_ffmpeg", side_effect=boom):
+            setup_env.run_setup(library, ["ffmpeg"], repair=False)
+
+        self.assertEqual(library.job["status"], "succeeded")
+        self.assertEqual(library.job["progress"], 100)
+
+    def test_pip_progress_line_reports_speed(self):
+        parsed = setup_env._pip_progress_from_line("  45.2/100.0 MB 12.5 MB/s eta 0:00:04")
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed["received"], 45_200_000)
+        self.assertEqual(parsed["total"], 100_000_000)
+        self.assertEqual(parsed["speed"], 12_500_000.0)
+        self.assertIsNone(setup_env._pip_progress_from_line("Collecting torch"))
+
+    def test_ffmpeg_download_reports_speed_on_job(self):
+        payload = b"x" * (3 * 1024 * 1024)
+
+        class FakeResponse:
+            headers = {"Content-Length": str(len(payload))}
+
+            def __init__(self):
+                self._offset = 0
+
+            def read(self, size):
+                if self._offset >= len(payload):
+                    return b""
+                chunk = payload[self._offset:self._offset + size]
+                self._offset += len(chunk)
+                return chunk
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        library = SimpleNamespace(lock=threading.Lock(), logs=[], process=None,
+                                  job={"status": "running", "progress": 0})
+        seen = []
+        real_tick = setup_env._tick
+
+        def capture(library_arg, phase, stage, progress, **kwargs):
+            real_tick(library_arg, phase, stage, progress, **kwargs)
+            speed = library_arg.job.get("download_speed")
+            if speed:
+                seen.append({
+                    "speed": speed,
+                    "received": library_arg.job.get("download_received"),
+                    "total": library_arg.job.get("download_total"),
+                })
+
+        with tempfile.TemporaryDirectory() as temporary:
+            install = Path(temporary) / "ffmpeg"
+            with patch.object(setup_env, "urlopen", return_value=FakeResponse()), \
+                 patch.object(setup_env, "ffmpeg_url", return_value="http://example/ffmpeg.zip"), \
+                 patch.object(setup_env, "_host_arch_ok", return_value=True), \
+                 patch.object(setup_env, "_cancelling", return_value=False), \
+                 patch.object(setup_env, "ffmpeg_dir", return_value=install), \
+                 patch.object(setup_env, "_extract_ffmpeg_zip"), \
+                 patch.object(setup_env, "ensure_ffmpeg_on_path", return_value=True), \
+                 patch.object(setup_env, "_tick", side_effect=capture), \
+                 patch.object(setup_env.time, "monotonic", side_effect=[0.0, 0.5, 1.0, 1.5, 2.0, 2.5]):
+                setup_env._install_ffmpeg(library, 0, 50)
+
+        self.assertTrue(seen, "download ticks should include a positive speed")
+        self.assertGreater(seen[-1]["speed"], 0)
+        self.assertEqual(seen[-1]["total"], len(payload))
+        self.assertEqual(seen[-1]["received"], len(payload))
+        # After extract, download_* fields are cleared so the install phase
+        # does not keep a stale MB/s.
+        self.assertNotIn("download_speed", library.job)
 
 
 if __name__ == "__main__":
