@@ -311,5 +311,35 @@ class JobLogTests(unittest.TestCase):
         self.assertEqual(len(list(self.base.glob("*.log"))), 2)
 
 
+
+class ThreadShareTests(unittest.TestCase):
+    """Parallel jobs split the inference cores instead of each taking them all."""
+
+    def library(self, cap):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        base = Path(temporary.name)
+        with mock.patch.dict(os.environ, {"UNWEAVE_MAX_CONCURRENT_JOBS": str(cap)}):
+            return Library(base / "projects", base / "ui.json", base / "cache")
+
+    def test_single_job_keeps_the_cli_default(self):
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("UNWEAVE_THREADS", None)
+            self.assertEqual(self.library(1)._thread_env(), {})
+
+    def test_parallel_jobs_share_the_cores(self):
+        library = self.library(3)
+        os.environ.pop("UNWEAVE_THREADS", None)
+        with mock.patch("unweave.webui.library.cpu_threads", return_value=11):
+            self.assertEqual(library._thread_env(), {"UNWEAVE_THREADS": "3"})
+        with mock.patch("unweave.webui.library.cpu_threads", return_value=2):
+            self.assertEqual(library._thread_env(), {"UNWEAVE_THREADS": "1"})
+
+    def test_user_override_wins(self):
+        library = self.library(3)
+        with mock.patch.dict(os.environ, {"UNWEAVE_THREADS": "8"}):
+            self.assertEqual(library._thread_env(), {})
+
+
 if __name__ == "__main__":
     unittest.main()

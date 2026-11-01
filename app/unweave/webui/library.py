@@ -20,7 +20,7 @@ from ..projects.metadata import MetadataLookup
 from ..audio.sources import youtube_url, youtube_command
 from ..audio.pipeline import probe_duration, parse_trim
 from ..audio.exports import FORMATS, export_stems
-from ..tools import (MISSING_FFMPEG, PCM_BYTES_PER_SECOND, app_version, ensure_ffmpeg_on_path,
+from ..tools import (MISSING_FFMPEG, PCM_BYTES_PER_SECOND, app_version, cpu_threads, ensure_ffmpeg_on_path,
                      env_first, require_free_space, total_ram_gb)
 from ..processes import popen, stop as stop_process
 from ..setup_env import (FFMPEG_SIZE_MB, RUNTIME_SIZE_MB, SEPARATION_SIZE_MB, YOUTUBE_SIZE_MB,
@@ -946,7 +946,8 @@ class Library:
                 command = self._separation_command(job, project, original, stage,
                                                    stems, group, split_leaves, trim)
                 # UTF-8 both ways, so non-ASCII song titles and paths survive the pipe on Windows.
-                env = dict(os.environ, PYTHONUNBUFFERED="1", PYTHONIOENCODING="utf-8", ORT_DISABLE_TELEMETRY="1")
+                env = dict(os.environ, PYTHONUNBUFFERED="1", PYTHONIOENCODING="utf-8", ORT_DISABLE_TELEMETRY="1",
+                           **self._thread_env())
                 with self.lock:
                     process = self._launch(job, command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                            text=True, encoding="utf-8", errors="replace", env=env, start_new_session=True)
@@ -993,6 +994,17 @@ class Library:
         finally:
             with self.lock:
                 self._finish(job)
+
+    def _thread_env(self) -> dict:
+        """Share the inference cores between jobs that may run side by side.
+
+        Each CLI otherwise takes cpu_count - 1 threads for itself, so two or three
+        parallel jobs (CUDA builds only) would oversubscribe the CPU. Uses the cap,
+        not the current count, so a job's share never depends on start order. A
+        user's own UNWEAVE_THREADS always wins."""
+        if self.max_concurrent_jobs <= 1 or env_first("UNWEAVE_THREADS", "SOUND_RAZOR_THREADS"):
+            return {}
+        return {"UNWEAVE_THREADS": str(max(1, cpu_threads() // self.max_concurrent_jobs))}
 
     def _separation_command(self, job, project: Path, original: str, stage: Path,
                             stems: list[str], group, split_leaves: bool, trim):

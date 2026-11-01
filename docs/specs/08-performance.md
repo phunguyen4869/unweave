@@ -124,8 +124,9 @@ noted so it is not mistaken for app bloat.
 - [x] Decided: **no** worker-process pool for imports; measured cost is ~1.1 s.
 - [x] The UI server no longer imports torch to detect CUDA (it kept hundreds of MB
       resident in a process that never runs inference); see [05](05-job-queue.md).
-- [ ] When more than one job runs (CUDA builds only), divide `cpu_threads()` by the
-      number of active jobs so parallel jobs do not oversubscribe the CPU.
+- [x] Parallel jobs (CUDA builds only) share the cores: `Library._thread_env()` passes
+      `UNWEAVE_THREADS = cpu_threads() // max_concurrent_jobs` to each job's CLI, unless
+      the user set `UNWEAVE_THREADS` themselves.
 - [ ] GPU path, now [11 — GPU acceleration](11-gpu-acceleration.md): the guitar split is hard-coded to CPU
       (`map_location='cpu'`, no device move), and the Windows PyPI torch is a CPU
       build. Optional CUDA setup step + device selection in `guitar_split.py` +

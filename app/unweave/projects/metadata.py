@@ -10,10 +10,12 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from .store import metadata_fields
+from ..tools import app_version
 
 _network_lock = threading.Lock()
 _last_request = 0.0
-USER_AGENT = 'SoundRazor/0.1 (local personal music library; Python urllib)'
+# MusicBrainz asks for "app/version ( contact )"; see their API rate-limiting rules.
+USER_AGENT = f"Unweave/{app_version()} ( https://github.com/um1chc5/unweave )"
 
 
 def fetch(url, maximum=2_000_000):

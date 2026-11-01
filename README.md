@@ -72,9 +72,17 @@ and troubleshooting.
 
 - **OS**: Windows 10/11 (64-bit)
 - **RAM**: 8GB minimum, 16GB recommended
-- **Storage**: ~10GB free space (for dependencies and models)
+- **Storage**: about 2 GB for the app's components and AI models, plus room for your songs (see below)
 - **CPU**: Modern 64-bit processor (4+ cores recommended)
-- **GPU**: Optional (CPU works fine)
+- **GPU**: Not used yet; everything runs on the CPU
+
+### How much space songs take
+
+Stems are stored as lossless FLAC, about 5–6 MB per stem per minute, so separating a
+song takes far more space than the song itself. A 4-minute song separated into all six
+stems needs roughly 130–150 MB; splitting the guitar into lead and rhythm adds about
+60 MB more. That is 15× or more the size of a typical MP3. Unweave checks for free space
+before each job and tells you if a song will not fit. Exports are extra copies on top.
 
 ## Technology Stack
 

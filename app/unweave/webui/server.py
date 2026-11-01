@@ -272,7 +272,7 @@ def serve(projects: Path | None, port: int, cache: Path, window=None, config: Pa
     default_root = default_root if default_root is not None else Path("output")
     library = Library(projects, config, cache, default_root, window=window)
     server = make_server(library, port)
-    print(f"Sound Razor UI: http://127.0.0.1:{server.server_port}", flush=True)
+    print(f"Unweave UI: http://127.0.0.1:{server.server_port}", flush=True)
     print("Open that address in your browser. Stop the server with Ctrl+C.", flush=True)
     try:
         server.serve_forever()

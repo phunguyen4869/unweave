@@ -169,7 +169,7 @@ Expected reduction: **~40–50% off stem storage on every project**.
 - [ ] Per-project / total size display and selective cleanup in the UI. Deferred
       until users ask; `describe_project()` already returns `bytes` per stem, so a
       per-project total is cheap when it is wanted.
-- [ ] Document stem-size amplification in the README.
+- [x] Stem sizes documented in the README ("How much space songs take").
 
 ### Disk-space precheck (done)
 
