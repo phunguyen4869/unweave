@@ -1,199 +1,255 @@
-# NotebookLM learning pack — Unweave
+# Unweave — NotebookLM all-in-one
 
-Use this pack with [NotebookLM](https://notebooklm.google.com/) (Gemini) to learn the
-technical side of Unweave quickly. Prefer **public GitHub links** (no file upload).
-Paste the starter prompt, then work through the question sets.
+**Zero-effort path:** upload *only this file* into [NotebookLM](https://notebooklm.google.com/)
+(or paste its raw GitHub URL after it is on `main`). Then send: `Start tutoring`.
 
-## 1. Add sources via links (preferred)
-
-Create a notebook named **Unweave — Technical** → **Add sources** → **Websites** /
-paste URLs. NotebookLM scrapes **that page only** (not the whole repo), so add one
-URL per doc. Use `raw.githubusercontent.com` so it gets clean Markdown text.
-
-Repo: `https://github.com/um1chc5/unweave` (branch `main`).
-
-### Limits to know
-
-- Public URLs only; private / unpushed local edits will not appear.
-- Snapshot at import time — re-add a URL after docs change if you need freshness.
-- Cap is about **50 sources** per notebook.
-- A GitHub *folder* or repo home page is not enough; list **file** URLs.
-
-### Must-have (paste as one batch)
+Raw URL (after push):
 
 ```
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/overview.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/architecture.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/tech-stack.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/README.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/01-app.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/learning/study-guide.md
 https://raw.githubusercontent.com/um1chc5/unweave/main/docs/learning/notebooklm-pack.md
 ```
 
-| Doc | Why |
+This document is self-contained. Extra repo docs are optional later, not required.
+
+---
+
+## Tutor instructions (for NotebookLM)
+
+When the learner says **Start tutoring** or asks anything about Unweave, follow these rules:
+
+1. Ground answers in **this source**. Prefer architecture and design rules over trivia.
+2. Always name layers when explaining a flow:
+   `UI → HTTP server → job queue → worker (python -m unweave) → engines → disk`.
+3. Call out invariants: atomic publish, one multi-stem model, scratch inside staging,
+   process-tree kill, stderr stream vs UI poll.
+4. Keep answers short: overview → bullets → one check question.
+5. If asked to quiz, ask one question at a time and wait.
+6. Suggested first reply after “Start tutoring”:
+   - 8-bullet “Unweave in one screen”
+   - text layer diagram
+   - ask which track they want: Pipeline / Jobs+progress / Packaging / Design-rules quiz
+
+---
+
+## What Unweave is
+
+Local desktop stem separator. A song becomes vocals, drums, bass, guitar, piano, other
+(optional guitar lead/rhythm). No account, no cloud separation, no telemetry.
+
+- Python package: `unweave` under `app/unweave/`
+- UI: vanilla JS in `web/`, no build step, shown in pywebview
+- Server: stdlib `http.server` on `127.0.0.1:8765` with a per-session token
+- Based on Sound Razor; cache folder stays `.sound-razor/` for compatibility
+
+Network only for: model downloads, YouTube import, MusicBrainz/covers, update check.
+
+---
+
+## Layer diagram
+
+```
+Web UI (web/js)
+   |  poll GET /api/state  (~1 s busy, ~2.5 s idle)
+   v
+HTTP server (webui/server.py)
+   |
+   v
+Job queue (webui/library.py)
+   |  spawn subprocess + read stdout/stderr line by line
+   v
+Worker: python -m unweave
+   |
+   v
+Engines: FFmpeg · PyTorch · ONNX Runtime
+   |
+   v
+Project folder on disk (atomic publish into stems/)
+```
+
+Asymmetry (important):
+
+- **Worker → queue:** stream/push (CLI markers on stderr).
+- **UI → server:** poll. Not WebSocket. Fine for a local 1-user app with minute-scale jobs.
+
+---
+
+## Seven stages of one separation
+
+1. **Entry** — `POST /api/projects/{id}/separate` → free-space check → `.separation-*`
+   staging → spawn `python -m unweave separate`.
+2. **Plan** — `resolve_plan()` / `model_request()` / `select_model()` (no audio yet).
+3. **Prepare** — `normalize()` via FFmpeg → 44.1 kHz stereo WAV inside staging.
+4. **Stem pass** — Demucs or MDX (~1× realtime on CPU reference).
+5. **Guitar split** (optional) — Mel-Band RoFormer lead/rhythm (~10× stem pass).
+6. **Assemble + publish** — fold into `other`, `validate_outputs()`, `separation.json`,
+   swap staging → `stems/` (restore backup on failure).
+7. **After** — UI loads FLAC into Web Audio mixer; optional export job.
+
+CLI enters at the same worker as the queue (`python -m unweave …`).
+
+---
+
+## Models and backends
+
+| When | Model | Backend | Where in code |
+|---|---|---|---|
+| Only vocals + instrumental | `UVR_MDXNET_KARA_2.onnx` | ONNX Runtime (CPU) | `pipeline.py` + `model_cache.create_separator()` via audio-separator |
+| Any other multi-stem plan | `htdemucs_6s` (always emits 6) | PyTorch (Demucs) | same path |
+| Guitar lead/rhythm | `lead_rhythm_listra92.ckpt` | PyTorch (RoFormer) | `guitar_split.py` + `vendor/roformer/` |
+| Explicit `--model` only | `htdemucs` (4-stem) | PyTorch | never auto-selected |
+
+Weights: SHA-256 pinned via `model_cache.cached_download()`.
+
+`htdemucs_6s` always computes all six; `_collect()` drops unneeded stems. Do not switch
+to a 4-stem model “to save work” — that changes what `other` means.
+
+---
+
+## Timing (CPU, i5-12400, ~355 s track)
+
+| Stage | Function | Cost |
+|---|---|---|
+| Stem pass | `_run_demucs()` | ~0.22 s / s of audio (~1×) |
+| Guitar split | `split_guitar()` | ~2.4 s / s of audio (~10×) |
+| Mix `other.flac` | `mix_stems()` | under a second |
+
+Dual-pass jobs need **step** progress; one shared bar would freeze during guitar.
+
+---
+
+## Jobs, progress, logs
+
+- Queue runs jobs (one per project; CPU builds usually max 1 concurrent).
+- Progress markers come from CLI stderr; `library._track_progress()` updates job dict.
+- UI reads snapshot via `GET /api/state` (`web/js/app.js` poll loop).
+
+| Field | Meaning |
 |---|---|
-| `docs/overview.md` | Product + package map |
-| `docs/architecture.md` | Data flow, design rules, modules, models |
-| `docs/tech-stack.md` | Stack choices and rejected alternatives |
-| `docs/specs/README.md` | Spec board + read order |
-| `docs/specs/01-app.md` | Full app behavior contract |
-| `docs/learning/study-guide.md` | Condensed brief |
-| `docs/learning/notebooklm-pack.md` | This pack (prompts live here too) |
+| `progress` | Whole-job 0–100 (nav / queue / badge) |
+| `step_progress` | Current step 0–100 (detail ring) |
+| `eta` / `step_eta` | Whole-job vs step remaining |
+| `pass_index` / `pass_count` | Dual-pass caption (e.g. Step 1 of 2) |
 
-### Strongly recommended (jobs / progress / packaging)
+Steps: `prepare` → `load` → `separate` → `guitar` → `finalize`.
 
-```
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/05-job-queue.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/09-job-progress.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/08-performance.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/04-first-run-setup.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/desktop-app.md
-```
+Every job writes a disk log under the config logs dir; the in-memory UI log is trimmed.
 
-### Optional deep dives
+---
 
-```
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/02-pre-separation-trim.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/03-output-formats.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/06-close-behavior.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/07-disk-usage.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/11-gpu-acceleration.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/12-settings-panel.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/13-startup-cleanup.md
-https://raw.githubusercontent.com/um1chc5/unweave/main/README.md
-```
+## Design rules (memorize these)
 
-### Fallback: upload files
+1. **One model for every multi-stem plan** — `other` must stay the same residual.
+2. **Compute once, then drop** — consistency > skipping inference.
+3. **Publish atomically** — staging + backup swap; never half a stem set.
+4. **Scratch inside job staging** — even `input.wav` (not `%TEMP%`).
+5. **Child processes die with job/app** — `processes.popen()` Job Object / process group.
+6. **Check free space before writing.**
+7. **Two progress numbers** — whole job vs step.
+8. **Every job leaves a log file.**
+9. **Leave a core free** — `cpu_threads()`; UI stays responsive.
+10. **UI process never imports torch** — `setup_env.torch_has_cuda()` inspects files only.
 
-If a doc is only local (not pushed yet), or a raw URL fails, drag-and-drop the `.md`
-from disk instead. Prefer docs over dumping the whole code tree; ask NotebookLM which
-modules matter, then open those in the repo.
+---
 
-**Note:** `docs/learning/*` must be on `main` before the learning URLs work. Until you
-push this pack, upload `study-guide.md` / `notebooklm-pack.md` locally, or use the
-other raw links that already exist on GitHub.
+## Module cheat sheet
 
-## 2. Starter prompt (paste first)
-
-Copy everything inside the fence into the NotebookLM chat:
-
-```
-You are my technical tutor for Unweave, a local desktop stem-separation app
-(Python package `unweave` + vanilla JS UI + stdlib HTTP server + pywebview).
-
-Rules:
-- Ground every answer in the uploaded sources. Cite the source file name.
-- Prefer architecture and design rules over trivia.
-- When explaining a flow, name the layers: UI → HTTP server → job queue →
-  worker process (`python -m unweave`) → engines (FFmpeg / PyTorch / ONNX) → disk.
-- Call out non-obvious invariants (atomic publish, one multi-stem model,
-  scratch inside staging, process-tree kill, polling vs stderr streaming).
-- If sources conflict or are silent, say so explicitly.
-- Keep answers tight: short overview, then bullets, then a “check your understanding”
-  question for me.
-
-Start by producing:
-1) A 10-bullet “Unweave in one screen” summary.
-2) A layer diagram in text (UI / server / queue / worker / engines / FS).
-3) A recommended 5-day study path using only the uploaded docs.
-```
-
-## 3. Follow-up prompt sets
-
-Use these after the starter. One set per study session.
-
-### Day A — Big picture
-
-```
-Teach me the product and package layout from overview.md and architecture.md.
-Explain: what stays local, what touches the network, and why the package is
-still named unweave / cache .sound-razor. End with a quiz of 5 questions
-(answers after I reply).
-```
-
-### Day B — Separation pipeline
-
-```
-Walk me through one separation end-to-end using architecture.md.
-For each of the 7 stages: inputs, key functions, outputs on disk, failure mode.
-Emphasize select_model(), atomic publish, and why guitar split is ~10× cost.
-```
-
-### Day C — Jobs, progress, UI refresh
-
-```
-Using specs 05 and 09 plus architecture.md, explain:
-1) How the queue supervises the worker (stream vs poll).
-2) How the UI gets status (GET /api/state).
-3) progress vs step_progress vs ETA.
-Compare polling vs WebSocket for this local app and argue which fits better
-given the sources.
-```
-
-### Day D — Desktop packaging & first run
-
-```
-Using tech-stack.md, desktop-app.md, and spec 04: explain why NSIS + embedded
-Python + pywebview + first-run download was chosen over Electron/Tauri/PyInstaller.
-Then outline the first-run stages and what is gated until setup succeeds.
-```
-
-### Day E — Design rules drill
-
-```
-Quiz me on the Design rules section of architecture.md.
-Ask one rule at a time. I answer; you correct with the source wording.
-After 10 rules, summarize which bugs each rule prevents.
-```
-
-## 4. Flashcard / Audio Overview prompts
-
-NotebookLM also has Study Guide / FAQ / Audio Overview. After sources are uploaded:
-
-**Study Guide custom focus**
-
-```
-Focus on: separation data flow, job queue, progress fields, model selection,
-atomic publish, desktop packaging tradeoffs. Ignore marketing language.
-```
-
-**FAQ custom focus**
-
-```
-Generate FAQs a new contributor would ask before their first PR touching
-audio/pipeline.py or webui/library.py.
-```
-
-**Audio Overview nudge (in chat, then generate)**
-
-```
-Prepare talking points for an Audio Overview aimed at a mid-level engineer
-new to this repo: 8–10 minutes, technical, no hype.
-```
-
-## 5. Quick map of key modules (cheat sheet)
-
-| Concern | Start here |
+| Concern | File |
 |---|---|
 | Separation orchestration | `app/unweave/audio/pipeline.py` |
 | Guitar lead/rhythm | `app/unweave/audio/guitar_split.py` |
-| Model download / SHA | `app/unweave/audio/model_cache.py` |
-| Export re-encode | `app/unweave/audio/exports.py` |
+| Model download / SHA / separator | `app/unweave/audio/model_cache.py` |
+| Export | `app/unweave/audio/exports.py` |
 | HTTP API | `app/unweave/webui/server.py` |
 | Job queue + progress parse | `app/unweave/webui/library.py` |
-| Project on-disk format | `app/unweave/projects/store.py` |
+| Project on disk | `app/unweave/projects/store.py` |
 | First-run install | `app/unweave/setup_env.py` |
 | Process tree kill | `app/unweave/processes.py` |
-| UI poll loop | `app/unweave/web/js/app.js` |
+| UI poll | `app/unweave/web/js/app.js` |
 | Progress UI | `app/unweave/web/js/features/progress.js` |
 
-## 6. Success check
+Frontend folders: `js/core/`, `js/chrome/`, `js/views/`, `js/features/`, `js/audio/`.
+CSS: six stylesheets under `web/css/`.
 
-You “get” the project when you can answer without notes:
+---
+
+## Tech stack & packaging
+
+| Layer | Choice | Why |
+|---|---|---|
+| Language | Python 3.11 | Audio/ML ecosystem |
+| HTTP | stdlib `http.server` | Tiny, loopback + token |
+| UI | Vanilla JS/CSS | No build step |
+| Inference | audio-separator + torch + onnxruntime | Demucs/MDX/RoFormer |
+| Window | pywebview | OS WebView, no Chromium bundle |
+| Installer | NSIS + embedded Python | Tiny setup; heavy deps on consent |
+| Linux | bash + `uv` venv | No portable embeddable runtime |
+
+Rejected: Electron (size), Tauri (Rust rewrite), monolithic PyInstaller (~500 MB),
+bundling PyTorch in the installer (~2 GB for everyone).
+
+First-run stages (approx): FFmpeg → separation engine (PyTorch etc.) → YouTube (yt-dlp).
+
+---
+
+## Privacy / trust
+
+- Audio never uploaded for separation.
+- Loopback-only server + session token.
+- Canonical stems: FLAC.
+
+---
+
+## Built-in lesson prompts (paste into chat)
+
+**Start**
+
+```
+Start tutoring
+```
+
+**Pipeline deep dive**
+
+```
+Walk the 7 separation stages. For each: key functions, disk outputs, failure mode.
+Focus on select_model() and atomic publish.
+```
+
+**Jobs & progress**
+
+```
+Explain stderr streaming vs UI polling, and progress vs step_progress.
+Argue why polling beats WebSocket for this local app.
+```
+
+**Packaging**
+
+```
+Why NSIS + embedded Python + pywebview + first-run download, not Electron/Tauri?
+```
+
+**Quiz mode**
+
+```
+Quiz me on the 10 design rules. One question at a time. Wait for my answer.
+```
+
+**Success check** (answer without notes)
 
 1. Why the UI never imports torch.
 2. Why multi-stem plans always use `htdemucs_6s`.
-3. How a cancelled job avoids half-written stems.
-4. How progress reaches the UI (stderr stream → queue memory → HTTP poll).
-5. What runs in-process vs subprocess.
+3. How cancel avoids half-written stems.
+4. How progress reaches the UI (stderr → queue → poll).
+5. What runs in-process vs in the worker subprocess.
+
+---
+
+## Optional later sources (not required)
+
+Only if you want more depth after this file:
+
+```
+https://raw.githubusercontent.com/um1chc5/unweave/main/docs/architecture.md
+https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/05-job-queue.md
+https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/09-job-progress.md
+https://raw.githubusercontent.com/um1chc5/unweave/main/docs/specs/01-app.md
+```

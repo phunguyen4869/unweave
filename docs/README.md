@@ -24,8 +24,8 @@
 
 ## Learning
 
-- [learning/notebooklm-pack.md](learning/notebooklm-pack.md) — Sources + prompts for NotebookLM / Gemini study
-- [learning/study-guide.md](learning/study-guide.md) — Condensed technical brief to upload as a source
+- [learning/notebooklm-pack.md](learning/notebooklm-pack.md) — **All-in-one** NotebookLM source (upload this only, then say `Start tutoring`)
+- [learning/study-guide.md](learning/study-guide.md) — Short human cheat sheet
 
 ## Handoff
 
