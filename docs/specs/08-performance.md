@@ -93,10 +93,14 @@ The 589 MB *resident* cost is the real per-job constraint, covered in
 
 ## 5. State polling is cheap — leave it alone (measured)
 
-`/api/state` calls `list_projects()`, which does a full directory scan and reads
+`/api/state` still calls `list_projects()`, which does a full directory scan and reads
 `metadata.json` + `separation.json` per project on **every poll** (1 s while a job
 runs, 2.5 s idle — see `app.js`). Measured at **0.7 ms per call for 4 projects** with
 a 4.3 KB payload. That is negligible.
+
+`Library.state()` now snapshots job fields **under** the lock, then runs
+`list_projects()` / `setup_status()` **outside** it (same pattern as `storage_info()`),
+so the disk walk no longer blocks progress-line updates on the job lock.
 
 It does scale linearly: at ~1,000 projects this is ~175 ms per poll. Only worth
 caching (e.g. mtime-keyed) if libraries that large are realistic. Not a current

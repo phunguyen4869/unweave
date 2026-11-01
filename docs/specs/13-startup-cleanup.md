@@ -27,7 +27,7 @@ in 1.4.x:
    the process exits normally; cancel and close end the process tree (spec 06), so
    the cleanup never runs.
 2. **The existing startup sweep misses most staging folders.**
-   `Library.sweep_stale_staging()` only looks at the **top level of the projects
+   `Library.sweep_stale_staging()` (`SettingsMixin` in `webui/settings.py`) only looks at the **top level of the projects
    folder**, but `.separation-*`, `.exports-*` and `.cover-*` are created **inside each
    project**, and `.model-download-*` inside the **model cache**. None of those is
    ever swept today (spec 06 says they are; it is wrong).
@@ -87,7 +87,7 @@ Sizing walks only matched entries, so the scan is cheap: a directory listing of
 `%TEMP%`, the projects root, each project folder and the model cache. Target:
 under one second on a library of a few hundred songs; if the walk is slower than 3 s,
 stop sizing and report "more than X" rather than blocking. Snapshot under
-`Library.lock`, size without it (same pattern as `storage_info`).
+`Library.lock`, size without it (same pattern as `SettingsMixin.storage_info()`).
 
 ## When and how the user is asked
 

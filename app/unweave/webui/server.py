@@ -3,23 +3,23 @@
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
-import os
 from pathlib import Path
 import secrets
-import shutil
 import subprocess
 import sys
-import tempfile
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from .library import Library
-from ..projects import cover_path, describe_project, import_project, project_path, save_metadata
-from ..tools import MISSING_FFMPEG, ensure_ffmpeg_on_path, require_free_space
+from .routes import build_router
+# Re-exported for package-layout smoke tests (handlers live under routes/).
+from ..projects import cover_path, describe_project, import_project, project_path, save_metadata  # noqa: F401
+from ..tools import MISSING_FFMPEG, ensure_ffmpeg_on_path
 
 STATIC = Path(__file__).resolve().parents[1] / "web"
 
 def make_server(library: Library, port: int = 8765):
     token = secrets.token_urlsafe(32)
+    router = build_router(library)
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, fmt, *args):
@@ -73,7 +73,7 @@ def make_server(library: Library, port: int = 8765):
                     if not secrets.compare_digest(self.headers.get("X-Unweave-Token", ""), token):
                         self.respond(403, {"error": "Reload the UI to authorize this session."})
                         return
-                    result = self.api(method, path, query)
+                    result = router.handle(method, path, query, self)
                     if result is not None:
                         self.respond(200, result)
                 elif method == "GET":
@@ -96,190 +96,6 @@ def make_server(library: Library, port: int = 8765):
             except Exception as error:
                 print(f"UI request failed: {error}", file=sys.stderr)
                 self.respond(500, {"error": "Unexpected server error; see the terminal."})
-
-        def api(self, method, path, query):
-            if method == 'POST' and path == '/api/import-youtube':
-                return library.import_youtube(self.json_body())
-            if method == 'POST' and path == '/api/metadata/search':
-                return {'matches': library.lookup.search(self.json_body())}
-            if method == 'POST' and path == '/api/metadata/prepare':
-                return library.lookup.prepare(self.json_body().get('token'))
-            if method == 'GET' and path.startswith('/api/metadata/cover/'):
-                item = library.lookup.get(path.rsplit('/', 1)[-1])
-                if not item.get('cover'):
-                    raise ValueError('Cover not found.')
-                self.respond(200, item['cover'], item['cover_type'])
-                return None
-            if method == "GET" and path == "/api/state":
-                return library.state()
-            if method == "GET" and path == "/api/updates/status":
-                return library.updates_status()
-            if method == "POST" and path == "/api/updates/prefs":
-                return library.set_updates_prefs(self.json_body())
-            if method == "POST" and path == "/api/updates/check":
-                data = self.json_body()
-                manual = bool(data.get("manual")) if isinstance(data, dict) else False
-                return library.check_updates(manual=manual)
-            if method == "POST" and path == "/api/setup/start":
-                data = self.json_body()
-                stages = data.get("stages") or []
-                if not isinstance(stages, list) or not all(isinstance(stage, str) for stage in stages):
-                    raise ValueError("Expected a list of stage names.")
-                return library.start_setup(stages, repair=bool(data.get("repair")))
-            if method == "GET" and path == "/api/storage":
-                return library.storage_info()
-            if method == "POST" and path == "/api/storage/clear-models":
-                self.json_body()  # require a POST body for CSRF-style same-origin habit
-                return library.clear_models()
-            if method == "GET" and path == "/api/cleanup":
-                return library.cleanup_info()
-            if method == "POST" and path == "/api/cleanup/scan":
-                self.json_body()
-                return library.run_cleanup_scan()
-            if method == "POST" and path == "/api/cleanup/run":
-                data = self.json_body()
-                ids = data.get("ids") if isinstance(data, dict) else None
-                if ids is not None and not isinstance(ids, list):
-                    raise ValueError("ids must be a list of leftover ids.")
-                return library.run_cleanup(ids)
-            if method == "POST" and path == "/api/cleanup/prefs":
-                return library.set_cleanup_prefs(self.json_body())
-            if method == "GET" and path == "/api/startup":
-                return library.startup_sections()
-            if method == "POST" and path == "/api/cleanup/start":
-                self.json_body()
-                library.start_background_cleanup()
-                return {"ok": True}
-            if method == "GET" and path == "/api/folders":
-                folder = Path(query.get("path") or str(library.root or Path.home())).expanduser().resolve()
-                if not folder.is_dir():
-                    raise ValueError("Folder not found.")
-                children = [{"name": p.name, "path": str(p.resolve())} for p in folder.iterdir()
-                            if p.is_dir() and not p.name.startswith(".")]
-                return {"path": str(folder), "parent": str(folder.parent),
-                        "folders": sorted(children, key=lambda p: p["name"].casefold())}
-            if method == "POST" and path == "/api/library":
-                data = self.json_body()
-                library.set_root(data.get("path"), create=data.get("create") is True)
-                return library.state()
-            if method == "POST" and path == "/api/import":
-                size = self.body_size(2 * 1024**3)
-                # The upload lands in the temp folder, then is copied into the project.
-                try:
-                    require_free_space(Path(tempfile.gettempdir()), size)
-                    if library.root is not None:
-                        require_free_space(library.root, size)
-                except ValueError:
-                    # Read the body off the socket first: answering mid-upload resets the
-                    # connection and the webview reports a network error instead of this one.
-                    remaining = size
-                    while remaining and (chunk := self.rfile.read(min(1024 * 1024, remaining))):
-                        remaining -= len(chunk)
-                    raise
-                with tempfile.TemporaryDirectory(prefix="unweave-upload-") as temporary:
-                    upload = Path(temporary) / "upload"
-                    with upload.open("wb") as out:
-                        remaining = size
-                        while remaining:
-                            chunk = self.rfile.read(min(1024 * 1024, remaining))
-                            if not chunk:
-                                raise ValueError("Audio upload was interrupted.")
-                            out.write(chunk)
-                            remaining -= len(chunk)
-                    with library.lock:
-                        root = library.require_matching_root(query.get("root"))
-                        enrichment = library.lookup.get(query['lookup_token']) if query.get('lookup_token') else None
-                        return import_project(root, upload, query.get("filename", ""), query, enrichment)
-            if method == "POST" and path == "/api/cancel":
-                try:
-                    data = self.json_body()
-                except ValueError:
-                    data = {}
-                job_id = data.get("job_id") if isinstance(data, dict) else None
-                library.cancel(job_id)
-                return {"ok": True}
-            if path.startswith("/api/window/"):
-                action = path[len("/api/window/"):]
-                if method == "GET" and action == "bounds":
-                    return library.window_action("bounds")
-                if method == "POST":
-                    return library.window_action(action, self.json_body())
-            parts = path.strip("/").split("/")
-            if len(parts) >= 3 and parts[:2] == ["api", "projects"]:
-                with library.lock:
-                    data = self.json_body() if method == "POST" else query
-                    root = library.require_matching_root(data.get("root"))
-                    project = project_path(root, parts[2])
-                    if method == "POST" and len(parts) == 4 and parts[3] == "metadata":
-                        enrichment = library.lookup.get(data['lookup_token']) if data.get('lookup_token') else None
-                        return save_metadata(project, data, enrichment)
-                    if method == 'GET' and len(parts) == 4 and parts[3] == 'cover':
-                        cover = cover_path(project)
-                        if not cover:
-                            raise ValueError('Cover not found.')
-                        self.respond(200, cover.read_bytes(), 'image/png' if cover.suffix == '.png' else 'image/jpeg')
-                        return None
-                    if method == "POST" and len(parts) == 4 and parts[3] == "separate":
-                        return library.start(parts[2], data.get("preset", "vocals"), data.get("stems"),
-                                             group=data.get("group"),
-                                             split_leaves=bool(data.get("split")),
-                                             trim=data.get("trim"))
-                    if method == "POST" and len(parts) == 4 and parts[3] == "split-guitar":
-                        return library.start(parts[2], 'guitar', guitar_split=True, trim=data.get("trim"))
-                    if method == "POST" and len(parts) == 4 and parts[3] == "export":
-                        return library.start_export(parts[2], data.get("formats"), data.get("stems"),
-                                                    prevent_clipping=data.get("prevent_clipping", True))
-                    if method == "POST" and len(parts) == 4 and parts[3] == "reveal":
-                        name = data.get("target", "project")
-                        targets = {"project": project, "stems": project / "stems",
-                                   "exports": project / "exports"}
-                        if name not in targets:
-                            raise ValueError("Unknown folder target.")
-                        target = targets[name]
-                        if name in {"stems", "exports"} and (target.is_symlink() or not target.is_dir()):
-                            raise ValueError("Folder not found.")
-                        if os.name == "nt":
-                            os.startfile(target)
-                        else:
-                            subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", str(target)])
-                        return {"ok": True}
-                    if method == "POST" and len(parts) == 4 and parts[3] == "delete":
-                        return library.delete(parts[2], data.get("root"))
-                    if method == "POST" and len(parts) == 4 and parts[3] == "clear-exports":
-                        return library.clear_exports(parts[2], data.get("root"))
-                    audio_route = (method == "GET" and len(parts) == 5 and parts[3] == "audio")
-                    original_route = (method == "GET" and len(parts) == 4 and parts[3] == "original")
-                    if audio_route:
-                        name = parts[4]
-                        allowed = {s["file"] for s in describe_project(project)["stems"]}
-                        if name not in allowed:
-                            raise ValueError("Stem not found.")
-                        audio = project / "stems" / name
-                        content_type = "audio/flac" if name.endswith(".flac") else "audio/wav"
-                        # Open while holding the lock, before a completed job swaps directories.
-                        handle = audio.open("rb")
-                    elif original_route:
-                        # The original file never moves once imported (only stems/ gets
-                        # swapped by a job), but opening it here too keeps one lock-then-
-                        # stream pattern for every audio route rather than two slightly
-                        # different ones.
-                        info = describe_project(project)
-                        if not info["original"]:
-                            raise ValueError("This project has no original recording.")
-                        audio = project / info["original"]
-                        content_type = mimetypes.guess_type(info["original"])[0] or "application/octet-stream"
-                        handle = audio.open("rb")
-                if audio_route or original_route:
-                    with handle:
-                        self.send_response(200)
-                        self.send_header("Content-Type", content_type)
-                        self.send_header("Content-Length", str(os.fstat(handle.fileno()).st_size))
-                        self.send_header("Cache-Control", "no-store")
-                        self.send_header("X-Content-Type-Options", "nosniff")
-                        self.end_headers()
-                        shutil.copyfileobj(handle, self.wfile)
-                    return None
-            raise ValueError("Unknown API route.")
 
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     server.daemon_threads = True

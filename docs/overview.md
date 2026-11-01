@@ -24,10 +24,12 @@ The Python package is `unweave` (`app/unweave/`). The on-disk model/cache folder
   the guitar stem into lead and rhythm.
 - **Export** — `audio/exports.py` re-encodes copies into six formats with optional peak
   limiting.
-- **Web UI server** — `webui/server.py` serves the local HTTP API and the static `web/`
-  frontend (vanilla ES modules, no framework, no build step).
-- **Job queue** — `webui/library.py` supervises separation subprocesses, one at a time per
-  project, and streams progress to the UI.
+- **Web UI server** — `webui/server.py` + Express-style `router.py` / `routes/` serve the
+  local HTTP API and the static `web/` frontend (vanilla ES modules, no framework, no
+  build step).
+- **Job queue** — `webui/queue.py` (`JobQueueMixin` on `Library`) supervises separation
+  subprocesses, one at a time per project, and streams progress (parsed in
+  `webui/progress.py`) to the UI.
 - **Metadata lookup** — `projects/metadata.py` queries MusicBrainz and Cover Art Archive.
 - **YouTube import** — `audio/sources.py` wraps yt-dlp.
 
@@ -51,7 +53,8 @@ unweave/
 │   │   ├── audio/            # pipeline.py, guitar_split.py, model_cache.py,
 │   │   │                     # exports.py, output_files.py, sources.py
 │   │   ├── projects/         # store.py (project format), metadata.py (MusicBrainz)
-│   │   ├── webui/            # server.py (HTTP), library.py (queue + jobs)
+│   │   ├── webui/            # server + router/routes; library façade;
+│   │   │                     # queue/settings/progress/plans mixins
 │   │   ├── setup_env.py      # first-run dependency detection and install
 │   │   └── web/              # static frontend: js/ ES modules, css/ six stylesheets
 │   └── ui_entrypoint.py      # pywebview launcher

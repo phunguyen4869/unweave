@@ -6,7 +6,7 @@
 |---|---|---|
 | Language | Python 3.11 | Audio/ML ecosystem, and the upstream core is already Python |
 | CLI | argparse | stdlib, no extra deps |
-| HTTP server | `http.server` (stdlib) | No framework needed, tiny attack surface, loopback + token |
+| HTTP server | `http.server` (stdlib) + tiny `webui/router.py` | No framework needed, tiny attack surface, loopback + token; Express-style route register in `webui/routes/` |
 | Frontend | Vanilla JS, HTML, CSS | No build step, no framework overhead, six stylesheets |
 | Audio playback | Web Audio API + AudioBufferSourceNode | Native browser audio, sample-accurate stem sync |
 | Tempo/pitch | SoundTouchJS (MPL-2.0) | Pitch-preserving speed change in an AudioWorklet |

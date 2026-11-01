@@ -51,10 +51,10 @@ Network only for: model downloads, YouTube import, MusicBrainz/covers, update ch
 Web UI (web/js)
    |  poll GET /api/state  (~1 s busy, ~2.5 s idle)
    v
-HTTP server (webui/server.py)
+HTTP server (webui/server.py + router/routes)
    |
    v
-Job queue (webui/library.py)
+Job queue (webui/queue.py via Library)
    |  spawn subprocess + read stdout/stderr line by line
    v
 Worker: python -m unweave
@@ -120,7 +120,7 @@ Dual-pass jobs need **step** progress; one shared bar would freeze during guitar
 ## Jobs, progress, logs
 
 - Queue runs jobs (one per project; CPU builds usually max 1 concurrent).
-- Progress markers come from CLI stderr; `library._track_progress()` updates job dict.
+- Progress markers come from CLI stderr; `progress.track_progress()` updates the job dict.
 - UI reads snapshot via `GET /api/state` (`web/js/app.js` poll loop).
 
 | Field | Meaning |
@@ -159,8 +159,10 @@ Every job writes a disk log under the config logs dir; the in-memory UI log is t
 | Guitar lead/rhythm | `app/unweave/audio/guitar_split.py` |
 | Model download / SHA / separator | `app/unweave/audio/model_cache.py` |
 | Export | `app/unweave/audio/exports.py` |
-| HTTP API | `app/unweave/webui/server.py` |
-| Job queue + progress parse | `app/unweave/webui/library.py` |
+| HTTP API | `app/unweave/webui/server.py` + `router.py` / `routes/` |
+| Job queue | `app/unweave/webui/queue.py` (`JobQueueMixin`) |
+| Progress parse | `app/unweave/webui/progress.py` |
+| Library façade | `app/unweave/webui/library.py` |
 | Project on disk | `app/unweave/projects/store.py` |
 | First-run install | `app/unweave/setup_env.py` |
 | Process tree kill | `app/unweave/processes.py` |

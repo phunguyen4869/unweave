@@ -33,9 +33,9 @@ read every number as phase-local because the title is phase-local.
 | `pass_count` / `pass_index` | Ring caption `Step N of M` | `2` / `1→2` when `split_leaves`; otherwise `1` / `1` |
 
 Phases come from CLI markers (`Preparing audio`, `Separating with…`, `Splitting guitar`,
-`Writing stems`, …) parsed in [`webui/library.py`](../../app/unweave/webui/library.py)
-`_track_progress`. The ring must stay pass-local so a long guitar pass does not look
-like a stalled stem pass.
+`Writing stems`, …) parsed in [`webui/progress.py`](../../app/unweave/webui/progress.py)
+`track_progress` (also exposed as `Library._track_progress`). The ring must stay
+pass-local so a long guitar pass does not look like a stalled stem pass.
 
 ## Detail panel layout (step-first)
 

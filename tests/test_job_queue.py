@@ -330,9 +330,9 @@ class ThreadShareTests(unittest.TestCase):
     def test_parallel_jobs_share_the_cores(self):
         library = self.library(3)
         os.environ.pop("UNWEAVE_THREADS", None)
-        with mock.patch("unweave.webui.library.cpu_threads", return_value=11):
+        with mock.patch("unweave.webui.queue.cpu_threads", return_value=11):
             self.assertEqual(library._thread_env(), {"UNWEAVE_THREADS": "3"})
-        with mock.patch("unweave.webui.library.cpu_threads", return_value=2):
+        with mock.patch("unweave.webui.queue.cpu_threads", return_value=2):
             self.assertEqual(library._thread_env(), {"UNWEAVE_THREADS": "1"})
 
     def test_user_override_wins(self):

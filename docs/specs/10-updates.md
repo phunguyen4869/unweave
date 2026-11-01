@@ -73,8 +73,9 @@ No network call until **Allow** or an explicit manual check.
 ## Implementation
 
 - Backend: [`app/unweave/updates.py`](../../app/unweave/updates.py) (compare + fetch);
-  prefs / check on `Library` in [`webui/library.py`](../../app/unweave/webui/library.py);
-  routes `GET /api/updates/status`, `POST /api/updates/prefs`, `POST /api/updates/check`.
+  prefs / check on `SettingsMixin` in [`webui/settings.py`](../../app/unweave/webui/settings.py)
+  (exposed via `Library`); routes in [`webui/routes/system.py`](../../app/unweave/webui/routes/system.py)
+  — `GET /api/updates/status`, `POST /api/updates/prefs`, `POST /api/updates/check`.
 - Frontend: [`web/js/chrome/updates.js`](../../app/unweave/web/js/chrome/updates.js) — startup-dialog
   updates section (shared with leftover clean-up, spec 13), start-of-session auto check when
   `auto`, Settings → Updates manual button, update banner.

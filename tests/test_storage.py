@@ -109,7 +109,7 @@ class StorageCleanupTests(unittest.TestCase):
                 self.library.lock.release()
             return 7
 
-        with mock.patch("unweave.webui.library.dir_bytes", side_effect=checking_dir_bytes), \
+        with mock.patch("unweave.webui.settings.dir_bytes", side_effect=checking_dir_bytes), \
              mock.patch("unweave.fsutil.dir_bytes", side_effect=checking_dir_bytes):
             info = self.library.storage_info()
         self.assertTrue(seen["free"])

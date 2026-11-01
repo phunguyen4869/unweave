@@ -94,8 +94,14 @@ projects/
   store.py          # project discovery and data model
   metadata.py       # tags and metadata lookup
 webui/
-  server.py         # local HTTP server, routes, static assets
-  library.py        # project operations and background jobs
+  server.py         # local HTTP server, static assets, auth/dispatch
+  router.py         # Express-style GET/POST + {param} matching
+  routes/           # registered API handlers (system, meta, projects, window)
+  library.py        # Library façade (root, state, window); owns lock/job lists
+  queue.py          # JobQueueMixin — enqueue, workers, cancel, JobLog
+  settings.py       # SettingsMixin — updates, cleanup, storage
+  progress.py       # stderr/tqdm → progress / step_progress / ETA
+  plans.py          # selection_stems / plan_stems / validate_group
 setup_env.py        # setup-stage detection and installation jobs
 web/
   js/               # vanilla ES modules and views

@@ -38,7 +38,7 @@ seven stages.
 sequenceDiagram
     participant UI as Web UI<br/>web/js
     participant SRV as HTTP server<br/>webui/server.py
-    participant Q as Job queue<br/>webui/library.py
+    participant Q as Job queue<br/>webui/queue.py
     participant W as Worker process<br/>python -m unweave
     participant ENG as Engines<br/>FFmpeg · PyTorch · ONNX
     participant FS as Project folder<br/>on disk
@@ -212,25 +212,26 @@ These are the non-obvious decisions; most bugs in this area came from breaking o
 ### `webui/`
 
 - `server.py` — stdlib `http.server` on 127.0.0.1:8765 with a per-session token header.
-  Everything outside `/api/` is a static file from `web/`. Routes:
+  Everything outside `/api/` is a static file from `web/`. API dispatch goes through a
+  tiny Express-style `router.py`; handlers are registered in `routes/`
+  (`system`, `meta`, `projects`, `window`).
 
-  | Area | Routes |
-  |---|---|
-  | State | `GET /api/state` (polled every second), `GET /api/startup` |
-  | Library | `POST /api/library`, `GET /api/folders`, `POST /api/import`, `POST /api/import-youtube` |
-  | Per song | `POST /api/projects/{id}/separate`, `…/split-guitar`, `…/export`, `…/metadata`, `…/delete`, `…/clear-exports`, `…/reveal`; `GET …/audio/{file}`, `…/original`, `…/cover` |
-  | Song info lookup | `POST /api/metadata/search`, `POST /api/metadata/prepare`, `GET /api/metadata/cover/…` |
-  | Jobs | `POST /api/cancel`, `POST /api/setup/start` (with `repair`) |
-  | Storage and clean-up | `GET /api/storage`, `POST /api/storage/clear-models`, `GET /api/cleanup`, `POST /api/cleanup/scan`, `…/run`, `…/start`, `…/prefs` |
-  | Updates | `GET /api/updates/status`, `POST /api/updates/check`, `POST /api/updates/prefs` |
-  | Desktop window | `POST /api/window/*` (title bar, move/resize, native folder picker) |
+  | Area | Module | Routes |
+  |---|---|---|
+  | State / library / jobs / setup / storage / updates | `routes/system.py` | `GET /api/state`, `GET /api/startup`, `POST /api/library`, `GET /api/folders`, `POST /api/import`, `POST /api/import-youtube`, `POST /api/cancel`, `POST /api/setup/start`, storage + cleanup + updates |
+  | Song info lookup | `routes/meta.py` | `POST /api/metadata/search`, `POST /api/metadata/prepare`, `GET /api/metadata/cover/{token}` |
+  | Per song | `routes/projects.py` | `POST /api/projects/{id}/separate`, `…/split-guitar`, `…/export`, `…/metadata`, `…/delete`, `…/clear-exports`, `…/reveal`; `GET …/audio/{file}`, `…/original`, `…/cover` |
+  | Desktop window | `routes/window.py` | `GET /api/window/bounds`, `POST /api/window/{action}` |
 
-- `library.py` — job queue and process supervision. Jobs run one at a time per project,
-  up to a RAM/GPU-derived cap; each spawns `python -m unweave` as a subprocess, reads
-  its stream line by line, and updates progress. Also owns `JobLog` (the on-disk
-  transcript), project listing, import, delete and export jobs, the disk-space checks,
-  Settings' storage numbers and clears (sized outside the lock), and the background
-  leftover scan.
+- `progress.py` — parse CLI/stderr markers and tqdm bars into `progress` / `step_progress` / ETA.
+- `plans.py` — stem-plan validation (`selection_stems`, `plan_stems`, `validate_group`).
+- `queue.py` — `JobQueueMixin`: enqueue/drain/workers/cancel (mixed into `Library`).
+- `settings.py` — `SettingsMixin`: updates prefs, leftover cleanup, storage sizes.
+- `library.py` — thin façade (`Library`) for root/state/window; owns shared lock and job lists.
+  Job workers live on `JobQueueMixin` (`queue.py`): up to a RAM/GPU-derived cap, each
+  spawns `python -m unweave`, reads stderr/stdout, updates progress via `progress.py`.
+  `JobLog`, import/delete/export, and disk-space checks sit with the queue; Settings
+  storage numbers/clears and the leftover scan sit on `SettingsMixin` (`settings.py`).
 
 ### `projects/`
 

@@ -398,8 +398,8 @@ separation, not only on “Separate again”:
 | `audio/guitar_split.py` | Sliced `sf.read`, fades, absolute trim persistence. |
 | CLI entry point | `--start` / `--end` on both commands. |
 | `projects/store.py` | Validate trim, add `offset` to stem dicts. |
-| `webui/library.py` | `start(trim=...)`, validation, CLI args, job handling. |
-| `webui/server.py` | Trim request routes and validation responses. |
+| `webui/queue.py` | `start(trim=...)`, validation, CLI args, job handling (`JobQueueMixin`). |
+| `webui/routes/projects.py` | Trim on `POST …/separate` and `…/split-guitar`. |
 | `web/js/audio/audio.js` | Per-track offset scheduling. |
 | `web/js/views/new.js` | First-separation trim editor and request body. |
 | `web/js/views/song.js` | Re-separation/split trim UI, seek-to-section, status line. |

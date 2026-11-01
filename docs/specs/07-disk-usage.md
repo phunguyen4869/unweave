@@ -152,9 +152,9 @@ Implemented:
   (`PCM_24`; soundfile would otherwise default to 16-bit); reads either format.
 - `store.py`: stem detection matches both `.wav` and `.flac`; legacy `.wav` stems still
   listed and played.
-- `library.py`: separation CLI output checked as `.flac`; guitar-split input is whichever
+- `queue.py`: separation CLI output checked as `.flac`; guitar-split input is whichever
   of `guitar.flac` / `guitar.wav` exists (`store.stem_file()`).
-- `server.py`: audio route serves `audio/flac` for `.flac` names, `audio/wav` otherwise.
+- `routes/projects.py`: audio route serves `audio/flac` for `.flac` names, `audio/wav` otherwise.
 - `web/js/audio/audio.js`: stem color lookup and guitar split button keyed on the stem name,
   ignoring `.flac` / `.wav`.
 

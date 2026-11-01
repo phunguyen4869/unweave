@@ -215,7 +215,7 @@ listener knows the export is a section (see
 
 ### 6.2 `Library.start_export()`
 
-New method in `webui/library.py`, modelled on `start()`:
+New method on `JobQueueMixin` in `webui/queue.py`, modelled on `start()`:
 
 - Sets `self.job = {"kind": "export", "project": id, "formats": [...],
   "stems": [...], "phase": "prepare", "progress": 0, ...}`.
@@ -237,7 +237,7 @@ New method in `webui/library.py`, modelled on `start()`:
 
 ## 7. Job progress and UI
 
-- `Library._track_progress()` gains markers:
+- `progress.track_progress()` / `Library._track_progress()` gains markers:
   - `"Exporting stems"` → phase `export`, floor 2.
   - `"Exported "` → phase `finalize`, floor 96.
   - Per-file lines such as `"Exporting vocals.flac (3/12)"` are hidden from the
@@ -297,8 +297,8 @@ New method in `webui/library.py`, modelled on `start()`:
 | File | Change |
 |---|---|
 | `audio/exports.py` | New module: format table, FFmpeg invocation, manifest, staging. |
-| `webui/library.py` | `start_export()`, job state, progress markers. |
-| `webui/server.py` | `/export` route, validation, reveal target. |
+| `webui/queue.py` | `start_export()`, job state; progress markers in `progress.py`. |
+| `webui/routes/projects.py` | `/export` route, validation, reveal target. |
 | `web/js/views/song.js` | Export dialog, submit, export job rendering, reveal target. |
 | `web/css/song.css` (or closest target stylesheet) | Dialog layout, format grid. |
 | CLI entry point | Optional export command and arguments. |

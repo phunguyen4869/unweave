@@ -14,16 +14,19 @@ machine, a stdlib HTTP server exposes a job API on loopback, and a vanilla-JS UI
 ## Layers
 
 ```
-Web UI  --poll /api/state-->  HTTP server  -->  Job queue
-                                                    | stream stderr
-                                                    v
-                                              python -m unweave
-                                                    |
-                                                    v
-                                         FFmpeg · PyTorch · ONNX
-                                                    |
-                                                    v
-                                         project stems/ (atomic)
+Web UI  --poll /api/state-->  HTTP server (router/routes)
+                                         |
+                                         v
+                                   Library façade
+                                    /          \
+                             queue.py        settings.py
+                         (jobs/progress)   (storage/updates)
+                                    |
+                                    v
+                            python -m unweave
+                                    |
+                                    v
+                         FFmpeg · PyTorch · ONNX → stems/ (atomic)
 ```
 
 - Worker → queue: **stream**
@@ -45,5 +48,5 @@ UI never imports torch.
 
 ## Key files
 
-`audio/pipeline.py` · `guitar_split.py` · `model_cache.py` · `webui/library.py` ·
-`webui/server.py` · `setup_env.py` · `web/js/app.js`
+`audio/pipeline.py` · `guitar_split.py` · `model_cache.py` · `webui/queue.py` ·
+`webui/progress.py` · `webui/server.py` · `setup_env.py` · `web/js/app.js`

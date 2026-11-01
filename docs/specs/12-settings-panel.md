@@ -44,7 +44,8 @@ normal setup job.
 
 - `GET /api/storage` — model cache and per-project byte totals (`Library.storage_info`).
   Snapshot root / cache / project list under `Library.lock`, then size on disk
-  **without** the lock so `/api/state` polling stays responsive. `dir_bytes` skips
+  **without** the lock so `/api/state` polling stays responsive
+  (`SettingsMixin.storage_info()` in `webui/settings.py`). `dir_bytes` skips
   symlinks and Windows junctions.
 - `POST /api/storage/clear-models` — clears only the known models cache; refuses while
   jobs run (check under the lock).

@@ -20,7 +20,7 @@ Unweave is a local desktop stem separator with a Python backend and vanilla ES-m
 | 12 | [Settings panel](12-settings-panel.md) | Done | Gear opens a sidebar dialog (General / Components / Storage / Updates / About). Repair reinstalls; storage sizes outside Library.lock; Storage leftover row from spec 13. No GPU row (spec 11 stays backlog). |
 | 13 | [Leftover clean-up and startup dialog](13-startup-cleanup.md) | Done | Shared scanner (`cleanup.py`); download caps; project-local `input.wav`; silent &lt;50 MB / dialog ≥50 MB; Settings → Storage leftover row; NSIS “Run Unweave now” via Explorer; `UNWEAVE_CLEANUP_TEMP` for safe testing. |
 | — | Web module/CSS refactor | Done | ES modules are under `web/js/`; six CSS files are under `web/css/`; static serving uses generic safe handling. |
-| — | Python package refactor | Done | Split into `audio/`, `projects/`, and `webui/` is complete; package-layout smoke tests pass. |
+| — | Python package refactor | Done | Split into `audio/`, `projects/`, and `webui/` is complete; package-layout smoke tests pass. `webui/` further split: Express-style `router`/`routes/`, plus `queue` / `settings` / `progress` / `plans` under a thin `Library` façade. |
 
 ### How to read status
 

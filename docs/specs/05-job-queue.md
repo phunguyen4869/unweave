@@ -16,8 +16,10 @@ if self.running() or self.worker is not None and self.worker.is_alive():
     raise ValueError("Another download or separation is already running.")
 ```
 
-That guard appears in four places in [`webui/library.py`](../../app/unweave/webui/library.py):
+That guard previously appeared in four places on `Library` (now
+[`webui/queue.py`](../../app/unweave/webui/queue.py) `JobQueueMixin`):
 `start()` (separation), `import_youtube()`, `start_setup()`, and `start_export()`.
+Today those entry points **enqueue** instead of rejecting (Phase 1 below).
 
 The limit is a consequence of the data model, not a resource check. `Library` holds
 three **scalars** — `self.job`, `self.process`, `self.worker` — plus one shared
@@ -70,6 +72,15 @@ Replace rejection with a FIFO queue that runs **one job at a time**. Implemented
 - `worker` attribute removed (no longer used); `server.py` joins the drainer thread on shutdown.
 
 Per-job logs are now keyed by job id, so progress lines stay attributable.
+
+### Module layout (current)
+
+| Module | Role |
+|---|---|
+| [`webui/library.py`](../../app/unweave/webui/library.py) | `Library` façade; owns `lock`, `queue`/`active`/`processes`, `state()` |
+| [`webui/queue.py`](../../app/unweave/webui/queue.py) | `JobQueueMixin` — enqueue, drain, workers, cancel, `JobLog` |
+| [`webui/progress.py`](../../app/unweave/webui/progress.py) | Parse CLI markers / tqdm into `progress` / `step_progress` / ETA |
+| [`webui/routes/`](../../app/unweave/webui/routes/) | HTTP handlers that call into `Library` |
 
 ## Remaining work
 
