@@ -4,9 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sound_razor.audio.pipeline import (_build_other, legacy_group, model_request,
+from unweave.audio.pipeline import (_build_other, legacy_group, model_request,
                                         publish_names, resolve_plan, select_model)
-from sound_razor.webui.library import Library, plan_stems, validate_group
+from unweave.webui.library import Library, plan_stems, validate_group
 
 
 class SelectModelTests(unittest.TestCase):
@@ -211,7 +211,7 @@ class CliPlanTests(unittest.TestCase):
     """The CLI must accept a plan that names the guitar-split outputs."""
 
     def parse(self, *extra):
-        from sound_razor.cli import parser
+        from unweave.cli import parser
         return parser().parse_args(["separate", "--file", "song.wav", *extra])
 
     def test_leaves_are_accepted_as_own_files(self):

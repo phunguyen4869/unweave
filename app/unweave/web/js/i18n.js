@@ -1,0 +1,512 @@
+/* ---------- i18n ---------- */
+// Every key holds {en, vi}. t() interpolates {placeholders} and falls back to English,
+// then to the raw key, so a missing translation never breaks rendering.
+const STRINGS = {
+  'titlebar.minimize': {en: 'Minimize', vi: 'Thu nhỏ'},
+  'titlebar.maximize': {en: 'Maximize', vi: 'Phóng to'},
+  'titlebar.restore': {en: 'Restore', vi: 'Khôi phục'},
+  'titlebar.close': {en: 'Close', vi: 'Đóng'},
+
+  'nav.separate': {en: 'Separate', vi: 'Tách nhạc'},
+  'nav.library': {en: 'Library', vi: 'Thư viện'},
+
+  'theme.toLight': {en: 'Switch to light theme', vi: 'Chuyển sang giao diện sáng'},
+  'theme.toDark': {en: 'Switch to dark theme', vi: 'Chuyển sang giao diện tối'},
+  'lang.toVi': {en: 'Switch to Vietnamese', vi: 'Chuyển sang tiếng Việt'},
+  'lang.toEn': {en: 'Switch to English', vi: 'Chuyển sang tiếng Anh'},
+
+  'banner.setupNeeded': {en: 'Unweave needs to download components before separation works — ', vi: 'Unweave cần tải thêm thành phần trước khi tách nhạc hoạt động — '},
+  'banner.openSetup': {en: 'open setup', vi: 'mở thiết lập'},
+  'banner.toContinue': {en: ' to continue.', vi: ' để tiếp tục.'},
+
+  'new.title': {en: 'Separate a song', vi: 'Tách một bài hát'},
+  'new.sub': {en: 'Pick a track, choose the stems you want, and Unweave splits it on this computer. Nothing is uploaded anywhere.', vi: 'Chọn một bản nhạc, chọn các track bạn muốn, và Unweave sẽ tách nó ngay trên máy tính này. Không có gì được tải lên đâu cả.'},
+  'credit.builtOn': {en: 'Based on <strong>Sound Razor</strong> by pedromtcosta', vi: 'Dựa trên <strong>Sound Razor</strong> của pedromtcosta'},
+  'credit.builtOnTitle': {en: 'Open the original Sound Razor project on GitHub', vi: 'Mở dự án Sound Razor gốc trên GitHub'},
+  'credit.desktopBuild': {en: 'Desktop build by <strong>um1chc5</strong>', vi: 'Bản desktop bởi <strong>um1chc5</strong>'},
+  'credit.desktopBuildTitle': {en: "Open um1chc5's GitHub profile", vi: 'Mở trang GitHub của um1chc5'},
+
+  'step.chooseAudio': {en: 'Choose audio', vi: 'Chọn âm thanh'},
+  'source.file': {en: 'File', vi: 'Tệp tin'},
+  'source.youtube': {en: 'YouTube', vi: 'YouTube'},
+  'dropzone.label': {en: 'Drop a song here, or <u>browse</u>', vi: 'Thả bài hát vào đây, hoặc <u>duyệt tệp</u>'},
+  'file.remove': {en: 'Remove file', vi: 'Xóa tệp'},
+  'youtube.label': {en: 'YouTube link', vi: 'Link YouTube'},
+  'youtube.missing': {en: 'YouTube import needs one more small download (yt-dlp, ~15 MB).', vi: 'Nhập từ YouTube cần tải thêm một gói nhỏ (yt-dlp, ~15 MB).'},
+  'youtube.install': {en: 'Install YouTube support', vi: 'Cài hỗ trợ YouTube'},
+  'youtube.installing': {en: 'Installing… {pct}%', vi: 'Đang cài… {pct}%'},
+  'youtube.installed': {en: 'YouTube support is installed.', vi: 'Đã cài xong hỗ trợ YouTube.'},
+  'youtube.hint': {en: 'Only download videos you have the right to use. Audio is extracted with yt-dlp.', vi: 'Chỉ tải những video bạn có quyền sử dụng. Âm thanh được trích xuất bằng yt-dlp.'},
+  'youtube.trimFirst': {en: 'Let me trim the song before separating', vi: 'Cho tôi cắt đoạn trước khi tách'},
+  'youtube.readyMeta': {en: 'Downloaded · {duration} · pick a section, then start', vi: 'Đã tải · {duration} · chọn đoạn rồi bắt đầu'},
+  'youtube.readyDismiss': {en: 'Not now (the song stays in your Library)', vi: 'Để sau (bài hát vẫn nằm trong Thư viện)'},
+  'youtube.readyNotice': {en: '“{title}” is downloaded. Trim it and start separating on the Separate page.', vi: 'Đã tải “{title}”. Cắt đoạn và bắt đầu tách ở trang Tách nhạc.'},
+  'start.download': {en: 'Download song', vi: 'Tải bài hát'},
+  'details.songDetails': {en: 'Song details', vi: 'Thông tin bài hát'},
+  'details.optional': {en: 'optional', vi: 'tùy chọn'},
+  'field.title': {en: 'Title', vi: 'Tên bài hát'},
+  'field.artist': {en: 'Artist', vi: 'Nghệ sĩ'},
+  'field.album': {en: 'Album', vi: 'Album'},
+  'field.year': {en: 'Year', vi: 'Năm'},
+  'new.usesFileName': {en: 'Uses the file name', vi: 'Dùng tên tệp tin'},
+  'step.stemsToExtract': {en: 'Stems to extract', vi: 'Track cần tách'},
+  'step.section': {en: 'Section', vi: 'Đoạn nhạc'},
+  'step.saveTo': {en: 'Save to', vi: 'Lưu vào'},
+  'output.default': {en: 'Default', vi: 'Mặc định'},
+  'output.change': {en: 'Change', vi: 'Đổi'},
+  'output.useDefaultFolder': {en: 'Use default folder (app/output)', vi: 'Dùng thư mục mặc định (app/output)'},
+  'upload.copying': {en: 'Copying audio into the project…', vi: 'Đang sao chép âm thanh vào dự án…'},
+  'start.hint': {en: 'First run downloads the AI models (~500 MB). Later runs start right away.', vi: 'Lần chạy đầu tiên sẽ tải mô hình AI (~500 MB). Các lần sau sẽ bắt đầu ngay.'},
+  'start.button': {en: 'Start separation', vi: 'Bắt đầu tách'},
+  'start.starting': {en: 'Starting…', vi: 'Đang bắt đầu…'},
+  'start.anotherRunning': {en: 'Another job is running…', vi: 'Đang có tác vụ khác chạy…'},
+  'start.addToQueue': {en: 'Add to queue', vi: 'Thêm vào hàng đợi'},
+
+  'setup.title': {en: 'Set up Unweave', vi: 'Thiết lập Unweave'},
+  'setup.sub': {en: 'A few things need to download before you can separate tracks. Everything after this is 100% local — no account, no telemetry, no re-asking.', vi: 'Cần tải một vài thứ trước khi bạn có thể tách nhạc. Sau bước này mọi thứ đều chạy 100% cục bộ — không tài khoản, không theo dõi, không hỏi lại.'},
+  'setup.notNow': {en: 'Not now', vi: 'Để sau'},
+  'setup.cancel': {en: 'Cancel', vi: 'Hủy'},
+  'setup.downloadInstall': {en: 'Download & install', vi: 'Tải & cài đặt'},
+  'setup.installing': {en: 'Installing · {pct}% overall', vi: 'Đang cài đặt · {pct}% tổng cộng'},
+  'setup.totalSummary': {en: 'Total: ~{total} MB · usually 3–8 min on a typical connection', vi: 'Tổng cộng: ~{total} MB · thường mất 3–8 phút với kết nối thông thường'},
+  'setup.failed': {en: 'Setup failed. Try again.', vi: 'Thiết lập thất bại. Hãy thử lại.'},
+  'setup.complete': {en: "Setup complete — you're ready to separate tracks.", vi: 'Thiết lập hoàn tất — bạn đã sẵn sàng để tách nhạc.'},
+  'setup.completeFirst': {en: 'Complete the one-time setup first.', vi: 'Hãy hoàn tất thiết lập lần đầu trước.'},
+  'setup.stage.ffmpeg': {en: 'FFmpeg (audio conversion)', vi: 'FFmpeg (chuyển đổi âm thanh)'},
+  'setup.stage.separation': {en: 'Separation engine (PyTorch, etc.)', vi: 'Bộ xử lý tách nhạc (PyTorch, v.v.)'},
+  'setup.stage.youtube': {en: 'YouTube import support (yt-dlp)', vi: 'Hỗ trợ nhập từ YouTube (yt-dlp)'},
+  'setup.stage.runtime': {en: 'Python runtime & app packages', vi: 'Python runtime & gói ứng dụng'},
+  'setup.stageShort.ffmpeg': {en: 'FFmpeg', vi: 'FFmpeg'},
+  'setup.stageShort.separation': {en: 'the separation engine', vi: 'bộ xử lý tách nhạc'},
+  'setup.stageShort.youtube': {en: 'YouTube support', vi: 'hỗ trợ YouTube'},
+  'setup.stageShort.runtime': {en: 'the app runtime', vi: 'runtime ứng dụng'},
+
+  'library.title': {en: 'Library', vi: 'Thư viện'},
+  'library.songsIn': {en: 'Songs in ', vi: 'Bài hát trong '},
+  'library.changeFolder': {en: 'Change folder', vi: 'Đổi thư mục'},
+  'library.noFolderLower': {en: 'no folder', vi: 'chưa có thư mục'},
+  'library.searchPlaceholder': {en: 'Search songs, artists…', vi: 'Tìm bài hát, nghệ sĩ…'},
+  'library.searchSrLabel': {en: 'Search songs', vi: 'Tìm bài hát'},
+  'library.refresh': {en: 'Refresh library', vi: 'Làm mới thư viện'},
+  'library.noMatching': {en: 'No matching songs', vi: 'Không tìm thấy bài hát'},
+  'library.noSongsYet': {en: 'No songs yet', vi: 'Chưa có bài hát nào'},
+  'library.tryDifferentSearch': {en: 'Try a different search.', vi: 'Hãy thử tìm kiếm khác.'},
+  'library.separateFirstSong': {en: 'Separate your first song and it will appear here.', vi: 'Tách bài hát đầu tiên và nó sẽ xuất hiện ở đây.'},
+  'library.separateASong': {en: 'Separate a song', vi: 'Tách một bài hát'},
+  'library.processing': {en: 'Processing {pct}%', vi: 'Đang xử lý {pct}%'},
+  'library.queued': {en: 'Queued', vi: 'Đang chờ'},
+  'library.stemsCount': {en: '{count} stems', vi: '{count} track'},
+  'library.notSeparated': {en: 'Not separated', vi: 'Chưa tách'},
+
+  'common.unknownArtist': {en: 'Unknown artist', vi: 'Nghệ sĩ không rõ'},
+  'common.noFolderSelected': {en: 'No folder selected', vi: 'Chưa chọn thư mục'},
+  'common.clear': {en: 'Clear', vi: 'Xóa'},
+  'common.close': {en: 'Close', vi: 'Đóng'},
+  'transport.restart': {en: 'Restart', vi: 'Phát lại từ đầu'},
+  'transport.seek': {en: 'Seek', vi: 'Tua'},
+  'transport.speed': {en: 'Speed', vi: 'Tốc độ'},
+  'transport.resetSpeed': {en: 'Reset speed', vi: 'Đặt lại tốc độ'},
+  'transport.masterVolume': {en: 'Master volume', vi: 'Âm lượng tổng'},
+
+  'song.back': {en: 'Back to library', vi: 'Quay lại thư viện'},
+  'song.openFolder': {en: 'Open folder', vi: 'Mở thư mục'},
+  'song.export': {en: 'Export', vi: 'Xuất tệp'},
+  'song.edit': {en: 'Edit', vi: 'Sửa'},
+  'song.deleteAria': {en: 'Delete song', vi: 'Xóa bài hát'},
+  'song.noOriginalFile': {en: 'No original file', vi: 'Không có tệp gốc'},
+  'song.separateAgain': {en: 'Separate again', vi: 'Tách lại'},
+  'song.separateThisSong': {en: 'Separate this song', vi: 'Tách bài hát này'},
+  'song.rerunReplaces': {en: "A successful rerun replaces this song's current stems.", vi: 'Chạy lại thành công sẽ thay thế các track hiện có của bài hát này.'},
+  'song.notSeparatedYet': {en: "This song hasn't been split yet. Choose stems and start.", vi: 'Bài hát này chưa được tách. Chọn track và bắt đầu.'},
+  'song.separateStemsButton': {en: 'Separate stems', vi: 'Tách track'},
+
+  'mixer.title': {en: 'Mixer', vi: 'Bàn trộn'},
+  'mixer.subSpace': {en: 'Balance, mute and solo each stem. <kbd>Space</kbd> plays or pauses.', vi: 'Cân bằng, tắt tiếng và solo từng track. Nhấn <kbd>Space</kbd> để phát hoặc tạm dừng.'},
+  'mixer.subWithOriginal': {en: 'Balance, mute and solo each stem — including the original, for comparison.', vi: 'Cân bằng, tắt tiếng và solo từng track — bao gồm cả bản gốc để so sánh.'},
+  'mixer.subPreviewOriginal': {en: 'Preview the original recording before choosing stems.', vi: 'Nghe thử bản ghi gốc trước khi chọn track.'},
+  'mixer.resetMix': {en: 'Reset mix', vi: 'Đặt lại bàn trộn'},
+
+  'loading.stemsDefault': {en: 'Loading stems…', vi: 'Đang tải track…'},
+  'loading.item': {en: 'Loading {name}…', vi: 'Đang tải {name}…'},
+  'loading.itemOf': {en: 'Loading {name} · {index} of {total}', vi: 'Đang tải {name} · {index}/{total}'},
+  'loading.loaded': {en: 'Loaded', vi: 'Đã tải xong'},
+  'loading.originalWaveform': {en: 'Loading the original waveform…', vi: 'Đang tải dạng sóng gốc…'},
+
+  'track.original': {en: 'Original', vi: 'Bản gốc'},
+  'stem.vocals': {en: 'Vocals', vi: 'Giọng hát'},
+  'stem.drums': {en: 'Drums', vi: 'Trống'},
+  'stem.bass': {en: 'Bass', vi: 'Bass'},
+  'stem.guitar': {en: 'Guitar', vi: 'Guitar'},
+  'stem.piano': {en: 'Piano', vi: 'Piano'},
+  'stem.other': {en: 'Other', vi: 'Khác'},
+  'stem.instrumental': {en: 'Instrumental', vi: 'Nhạc nền'},
+  'stem.lead': {en: 'Lead', vi: 'Lead'},
+  'stem.rhythm': {en: 'Rhythm', vi: 'Rhythm'},
+
+  'plan.title': {en: 'Separation plan', vi: 'Kế hoạch tách'},
+  'plan.sub': {en: 'Pick each stem’s fate. Anything folded in is mixed into <code>other.flac</code> and never written on its own. This only sets the plan — Start runs it.', vi: 'Chọn số phận cho từng stem. Stem được gộp sẽ trộn vào <code>other.flac</code> và không được ghi thành file riêng. Ở đây chỉ thiết lập kế hoạch — nút Bắt đầu mới chạy.'},
+  'plan.original': {en: 'Original', vi: 'Gốc'},
+  'plan.otherFile': {en: 'other.flac', vi: 'other.flac'},
+  'plan.runsHeading': {en: 'Run schedule', vi: 'Lịch chạy'},
+  'plan.reset': {en: 'Reset', vi: 'Đặt lại'},
+  'plan.confirm': {en: 'Use this plan', vi: 'Dùng kế hoạch này'},
+
+  'plan.badgeAuto': {en: 'auto', vi: 'tự động'},
+  'plan.badgeGrouped': {en: 'in other', vi: 'gộp'},
+  'plan.badgeDisabled': {en: 'disabled', vi: 'đã tắt'},
+  'plan.auto': {en: 'auto', vi: 'tự động'},
+  'plan.state.on': {en: 'its own file', vi: 'file riêng'},
+  'plan.state.off': {en: 'disabled', vi: 'đã tắt'},
+  'plan.state.grouped': {en: 'folded into other.flac', vi: 'gộp vào other.flac'},
+  'plan.titleOn': {en: 'Click to drop this stem', vi: 'Nhấn để bỏ stem này'},
+  'plan.titleOff': {en: 'Click to keep this stem', vi: 'Nhấn để giữ stem này'},
+  'plan.titleAuto': {en: 'Other is always the destination for folded stems', vi: 'Other luôn là nơi nhận các stem được gộp'},
+  'plan.titleGrouped': {en: 'Fold it back into its own file', vi: 'Tách ra thành file riêng'},
+  'plan.titleLeaf': {en: 'Created by the guitar split', vi: 'Được tạo bởi lần tách guitar'},
+  'plan.titleLeafGrouped': {en: 'Folded into other.flac by the guitar split', vi: 'Được gộp vào other.flac bởi lần tách guitar'},
+
+  'plan.merge': {en: 'Fold {stem} into other.flac', vi: 'Gộp {stem} vào other.flac'},
+  'plan.unmerge': {en: 'Give {stem} its own file', vi: 'Cho {stem} một file riêng'},
+  'plan.mergeShort': {en: '→ other', vi: '→ other'},
+  'plan.unmergeShort': {en: '↩ own file', vi: '↩ file riêng'},
+  'plan.split': {en: 'Split', vi: 'Tách'},
+  'plan.splitTitleOn': {en: 'Turn the lead/rhythm split off', vi: 'Tắt tách lead/rhythm'},
+  'plan.splitTitleOff': {en: 'Split the guitar into lead and rhythm', vi: 'Tách guitar thành lead và rhythm'},
+  'plan.sub.lead': {en: 'solo', vi: 'solo'},
+  'plan.sub.rhythm': {en: 'rhythm', vi: 'đệm'},
+
+  'plan.stepSeparate': {en: 'Separate into {stems} stems', vi: 'Tách thành {stems} stem'},
+  'plan.stepSeparateVocal': {en: 'Separate vocals (karaoke model)', vi: 'Tách giọng hát (model karaoke)'},
+  'plan.stepSplit': {en: 'Split guitar into lead + rhythm', vi: 'Tách guitar thành lead + rhythm'},
+  'plan.stepSplitSkipped': {en: 'Split guitar into lead + rhythm', vi: 'Tách guitar thành lead + rhythm'},
+  'plan.stepMix': {en: 'Mix {count} stems into other.flac', vi: 'Trộn {count} stem vào other.flac'},
+  'plan.stepMixSingle': {en: 'Copy 1 stem into other.flac', vi: 'Chép 1 stem vào other.flac'},
+  'plan.stepMixNone': {en: 'Mix into other.flac', vi: 'Trộn vào other.flac'},
+  // Measured on CPU (i5-12400, no GPU): the stem pass runs at ~0.22 s of compute per
+  // second of audio, the guitar split at ~2.4 s, mixing is one ffmpeg call. So the
+  // split is ~10x the stem pass, not the 0.3x this copy used to claim.
+  'plan.costFull': {en: '~1×', vi: '~1×'},
+  'plan.costFast': {en: '~1×', vi: '~1×'},
+  'plan.costSplit': {en: '~10×', vi: '~10×'},
+  'plan.costSkipped': {en: 'skipped', vi: 'bỏ qua'},
+  'plan.costMix': {en: '<1 s', vi: '<1 s'},
+  'plan.costInstant': {en: 'instant', vi: 'tức thì'},
+  'plan.passes': {en: '{count} passes', vi: '{count} lượt'},
+  'plan.files': {en: '{count} files', vi: '{count} file'},
+  'plan.estimate': {en: '≈ {factor}× a plain separation', vi: '≈ {factor}× một lần tách thường'},
+  'plan.footHint': {en: '{own} own files · {grouped} folded into other.flac', vi: '{own} file riêng · {grouped} gộp vào other.flac'},
+
+  'plan.warn.peak': {en: 'Mixing {count} stems can push other.flac above full scale; it is written as 24-bit FLAC, so keep the headroom in mind when you master.', vi: 'Trộn {count} stem có thể làm other.flac vượt mức tối đa; file ghi ở FLAC 24-bit nên hãy chú ý khoảng dự trữ khi master.'},
+  'plan.warn.leavesBothGrouped': {en: 'Both split halves are folded, so the split adds work without adding a file.', vi: 'Cả hai nửa đều bị gộp, nên lần tách tốn công mà không thêm file nào.'},
+  'plan.warn.splitSlow': {en: 'Guitar split is ~10× slower than the stem pass (estimate); most of the run is this second pass.', vi: 'Tách guitar chậm hơn khoảng ~10× lượt tách stem (ước lượng); phần lớn thời gian chạy là lượt thứ hai này.'},
+  'plan.warn.silent': {en: 'Nothing is selected — there is no file to write.', vi: 'Chưa chọn gì — không có file nào để ghi.'},
+  'plan.warn.noOwnFiles': {en: 'No stem gets its own file; everything lands in other.flac.', vi: 'Không stem nào có file riêng; mọi thứ nằm trong other.flac.'},
+  'plan.warn.singleFile': {en: 'This plan produces exactly one file.', vi: 'Kế hoạch này chỉ tạo ra một file.'},
+
+  'plan.summary': {en: 'Advanced plan · {own} own · {grouped} in other.flac', vi: 'Kế hoạch nâng cao · {own} riêng · {grouped} trong other.flac'},
+  'plan.edit': {en: 'Edit plan', vi: 'Sửa kế hoạch'},
+  'plan.toQuick': {en: 'Back to quick', vi: 'Về nhanh'},
+  'plan.open': {en: 'Advanced plan…', vi: 'Kế hoạch nâng cao…'},
+  'picker.customTitle': {en: 'Instruments', vi: 'Nhạc cụ'},
+  'picker.customSub': {en: 'Pick individual stems', vi: 'Chọn từng track riêng'},
+  'picker.vocalsPresetTitle': {en: 'Vocals + Instrumental', vi: 'Giọng hát + Nhạc nền'},
+  'picker.vocalsPresetSub': {en: 'Two-track split (karaoke)', vi: 'Tách thành 2 track (karaoke)'},
+  'picker.selectStemsLegend': {en: 'Select stems', vi: 'Chọn track'},
+  'picker.hint': {en: 'Unselected instruments are dropped. Tick “{other}” to keep everything left over in one track.', vi: 'Nhạc cụ không chọn sẽ bị bỏ. Chọn “{other}” để giữ mọi thứ còn lại trong một track.'},
+
+  'step.separation.prepare': {en: 'Prepare audio', vi: 'Chuẩn bị âm thanh'},
+  'step.separation.load': {en: 'Load AI model', vi: 'Tải mô hình AI'},
+  'step.separation.separate': {en: 'Separate stems', vi: 'Tách track'},
+  'step.separation.guitar': {en: 'Split guitar', vi: 'Tách guitar'},
+  'step.separation.finalize': {en: 'Save stems', vi: 'Lưu track'},
+  'step.guitar.prepare': {en: 'Load model', vi: 'Tải mô hình'},
+  'step.guitar.separate': {en: 'Split guitar', vi: 'Tách guitar'},
+  'step.guitar.finalize': {en: 'Save tracks', vi: 'Lưu track'},
+  'step.youtube.download': {en: 'Download audio', vi: 'Tải âm thanh'},
+  'step.youtube.finalize': {en: 'Create project', vi: 'Tạo dự án'},
+  'step.export.prepare': {en: 'Check files', vi: 'Kiểm tra tệp'},
+  'step.export.export': {en: 'Convert stems', vi: 'Chuyển đổi track'},
+  'step.export.finalize': {en: 'Write files', vi: 'Ghi tệp'},
+  'step.setup.prepare': {en: 'Check setup', vi: 'Kiểm tra thiết lập'},
+  'step.setup.download': {en: 'Download components', vi: 'Tải thành phần'},
+  'step.setup.install': {en: 'Install packages', vi: 'Cài đặt gói'},
+  'step.setup.finalize': {en: 'Finish', vi: 'Hoàn tất'},
+
+  'format.flac.title': {en: 'FLAC', vi: 'FLAC'},
+  'format.flac.sub': {en: 'Lossless · default', vi: 'Không nén · mặc định'},
+  'format.mp3.title': {en: 'MP3 320', vi: 'MP3 320'},
+  'format.mp3.sub': {en: 'Universal compatibility', vi: 'Tương thích rộng rãi'},
+  'format.opus.title': {en: 'Opus 192', vi: 'Opus 192'},
+  'format.opus.sub': {en: 'Smallest files', vi: 'Tệp nhỏ nhất'},
+  'format.m4a.title': {en: 'M4A 256', vi: 'M4A 256'},
+  'format.m4a.sub': {en: 'Apple ecosystem', vi: 'Hệ sinh thái Apple'},
+  'format.wav16.title': {en: 'WAV 16-bit', vi: 'WAV 16-bit'},
+  'format.wav16.sub': {en: 'DAW-safe', vi: 'An toàn cho DAW'},
+  'format.aiff.title': {en: 'AIFF', vi: 'AIFF'},
+  'format.aiff.sub': {en: 'Hardware and DAW workflows', vi: 'Cho phần cứng và quy trình DAW'},
+
+  'progress.cancel': {en: 'Cancel', vi: 'Hủy'},
+  'progress.timeLeft': {en: 'Time left', vi: 'Thời gian còn lại'},
+  'progress.stepTimeLeft': {en: 'Step time left', vi: 'Thời gian bước còn lại'},
+  'progress.wholeJob': {en: 'Whole job', vi: 'Toàn bộ việc'},
+  'progress.guitarNext': {en: 'Split guitar runs next and takes longer', vi: 'Tách guitar chạy tiếp và lâu hơn'},
+  'progress.jobDoneIn': {en: 'Done in about {time}', vi: 'Xong khoảng {time}'},
+  'progress.elapsed': {en: 'Elapsed', vi: 'Đã trôi qua'},
+  'progress.stemsLabel': {en: 'Stems', vi: 'Track'},
+  'progress.processLog': {en: 'Process log', vi: 'Nhật ký xử lý'},
+  'progress.stopping': {en: 'Stopping…', vi: 'Đang dừng…'},
+  'progress.working': {en: 'Working…', vi: 'Đang xử lý…'},
+  'progress.cancelled': {en: 'Cancelled', vi: 'Đã hủy'},
+  'progress.etaFewSeconds': {en: 'a few seconds', vi: 'vài giây'},
+  'progress.etaEstimating': {en: 'Estimating…', vi: 'Đang ước tính…'},
+  'progress.etaDone': {en: 'Done', vi: 'Xong'},
+
+  'setup.phase.prepare.title': {en: "Checking what's needed", vi: 'Đang kiểm tra những gì cần thiết'},
+  'setup.phase.finalize.title': {en: 'Finishing up', vi: 'Đang hoàn tất'},
+  'setup.phase.downloading': {en: 'Downloading', vi: 'Đang tải'},
+  'setup.phase.downloadingStage': {en: 'Downloading {stage}', vi: 'Đang tải {stage}'},
+  'setup.phase.installing': {en: 'Installing', vi: 'Đang cài đặt'},
+  'setup.phase.installingStage': {en: 'Installing {stage}', vi: 'Đang cài đặt {stage}'},
+  'setup.phase.prepare.sub': {en: 'Verifying the runtime, FFmpeg and the separation engine.', vi: 'Đang kiểm tra runtime, FFmpeg và bộ xử lý tách nhạc.'},
+  'setup.phase.download.sub': {en: 'Fetching the files above.', vi: 'Đang tải các tệp ở trên.'},
+  'setup.phase.install.sub': {en: 'This can take several minutes.', vi: 'Bước này có thể mất vài phút.'},
+  'setup.phase.finalize.sub': {en: 'Verifying everything works.', vi: 'Đang kiểm tra mọi thứ hoạt động tốt.'},
+  'setup.phase.completeTitle': {en: 'Setup complete', vi: 'Thiết lập hoàn tất'},
+  'setup.phase.failedTitle': {en: 'Setup failed', vi: 'Thiết lập thất bại'},
+  'setup.phase.readyNowSub': {en: 'You can separate tracks now.', vi: 'Bạn có thể tách nhạc ngay bây giờ.'},
+
+  'export.phase.prepare.title': {en: 'Preparing export', vi: 'Đang chuẩn bị xuất tệp'},
+  'export.phase.export.title': {en: 'Converting stems', vi: 'Đang chuyển đổi track'},
+  'export.phase.finalize.title': {en: 'Writing exports', vi: 'Đang ghi tệp xuất'},
+  'export.phase.complete': {en: 'Export complete', vi: 'Xuất tệp hoàn tất'},
+  'export.phase.failed': {en: 'Export failed', vi: 'Xuất tệp thất bại'},
+  'export.phase.workingSub': {en: 'Lossless and lossy copies stay inside this project.', vi: 'Các bản sao (nén và không nén) được lưu trong dự án này.'},
+  'export.phase.readySub': {en: 'Your exported copies are ready.', vi: 'Các bản xuất của bạn đã sẵn sàng.'},
+  'export.sectionNote': {en: 'These stems are a {length} s section starting at {start}.', vi: 'Các track này là một đoạn dài {length} s bắt đầu từ {start}.'},
+  'export.chooseFormat': {en: 'Choose at least one format.', vi: 'Chọn ít nhất một định dạng.'},
+  'export.chooseStem': {en: 'Choose at least one stem.', vi: 'Chọn ít nhất một track.'},
+
+  'sep.phase.prepareNormal': {en: 'Preparing audio', vi: 'Đang chuẩn bị âm thanh'},
+  'sep.phase.prepareGuitar': {en: 'Loading the guitar model', vi: 'Đang tải mô hình guitar'},
+  'sep.phase.loadModel': {en: 'Loading AI model', vi: 'Đang tải mô hình AI'},
+  'sep.phase.downloadModel': {en: 'Downloading AI model', vi: 'Đang tải xuống mô hình AI'},
+  'sep.phase.downloadYoutube': {en: 'Downloading from YouTube', vi: 'Đang tải từ YouTube'},
+  'sep.phase.separateGuitar': {en: 'Splitting guitar into lead & rhythm', vi: 'Đang tách guitar thành lead & rhythm'},
+  'sep.phase.separateNormal': {en: 'Separating stems', vi: 'Đang tách track'},
+  'sep.phase.splitGuitar': {en: 'Splitting guitar into lead & rhythm', vi: 'Đang tách guitar thành lead & rhythm'},
+  'sep.phase.finalizeYoutube': {en: 'Creating project', vi: 'Đang tạo dự án'},
+  'sep.phase.finalizeNormal': {en: 'Saving stems', vi: 'Đang lưu track'},
+  'sep.sub.prepare': {en: 'Converting to 44.1 kHz stereo WAV', vi: 'Đang chuyển sang WAV stereo 44.1 kHz'},
+  'sep.sub.loadDownloading': {en: 'First run only, this can take a few minutes', vi: 'Chỉ lần chạy đầu tiên, có thể mất vài phút'},
+  'sep.sub.load': {en: 'Getting the neural network ready', vi: 'Đang chuẩn bị mạng nơ-ron'},
+  'sep.sub.download': {en: 'Fetching the best audio stream', vi: 'Đang lấy luồng âm thanh tốt nhất'},
+  'sep.sub.separate': {en: 'The AI model is working through your track', vi: 'Mô hình AI đang xử lý bản nhạc của bạn'},
+  'sep.sub.splitGuitar': {en: 'Second pass with the guitar model, slower than the stem split', vi: 'Lượt thứ hai với mô hình guitar, chậm hơn lượt tách track'},
+  'sep.sub.finalize': {en: 'Almost done', vi: 'Sắp xong'},
+  'sep.ended.downloadComplete': {en: 'Download complete', vi: 'Tải xong'},
+  'sep.ended.separationComplete': {en: 'Separation complete', vi: 'Tách nhạc hoàn tất'},
+  'sep.ended.downloadFailed': {en: 'Download failed', vi: 'Tải thất bại'},
+  'sep.ended.separationFailed': {en: 'Separation failed', vi: 'Tách nhạc thất bại'},
+  'sep.readySub': {en: 'Your stems are ready.', vi: 'Các track của bạn đã sẵn sàng.'},
+
+  'trim.dragStart': {en: 'Section start', vi: 'Điểm bắt đầu đoạn'},
+  'trim.dragEnd': {en: 'Section end', vi: 'Điểm kết thúc đoạn'},
+  'trim.start': {en: 'Start', vi: 'Bắt đầu'},
+  'trim.end': {en: 'End', vi: 'Kết thúc'},
+  'trim.length': {en: 'Length', vi: 'Độ dài'},
+  'trim.fullSong': {en: 'Full song', vi: 'Cả bài'},
+  'trim.preview': {en: 'Preview', vi: 'Nghe thử'},
+  'trim.stop': {en: 'Stop', vi: 'Dừng'},
+  'trim.hintDefault': {en: 'Drag the handles, or type exact times.', vi: 'Kéo các tay cầm, hoặc nhập thời gian chính xác.'},
+  'trim.startAriaLabel': {en: 'Section start in project time', vi: 'Điểm bắt đầu đoạn theo thời gian dự án'},
+  'trim.endAriaLabel': {en: 'Section end in project time', vi: 'Điểm kết thúc đoạn theo thời gian dự án'},
+  'trim.startAt': {en: 'Start at {time}', vi: 'Bắt đầu lúc {time}'},
+  'trim.endAt': {en: 'End at {time}', vi: 'Kết thúc lúc {time}'},
+  'trim.sectionText': {en: 'Section {start} – {end} ({length} s)', vi: 'Đoạn {start} – {end} ({length} s)'},
+  'time.minute': {en: '{n} minute', vi: '{n} phút'},
+  'time.minutes': {en: '{n} minutes', vi: '{n} phút'},
+  'time.second': {en: '{n} second', vi: '{n} giây'},
+  'time.seconds': {en: '{n} seconds', vi: '{n} giây'},
+
+  'lookup.findButton': {en: 'Find details & cover', vi: 'Tìm thông tin & ảnh bìa'},
+  'lookup.help': {en: 'Search by song title, artist and album. Only this text is sent to MusicBrainz. Review a match before saving.', vi: 'Tìm theo tên bài hát, nghệ sĩ và album. Chỉ nội dung này được gửi tới MusicBrainz. Kiểm tra kết quả trước khi lưu.'},
+  'lookup.searching': {en: 'Searching MusicBrainz…', vi: 'Đang tìm trên MusicBrainz…'},
+  'lookup.chooseMatch': {en: 'Choose a match to fill the fields. You can edit them before saving.', vi: 'Chọn một kết quả để điền vào các ô. Bạn có thể chỉnh sửa trước khi lưu.'},
+  'lookup.noMatches': {en: 'No matches. Check the title and artist, or try removing the album.', vi: 'Không tìm thấy kết quả. Kiểm tra lại tên bài hát và nghệ sĩ, hoặc thử bỏ album.'},
+  'lookup.useThisMatch': {en: 'Use this match', vi: 'Dùng kết quả này'},
+  'lookup.fetchingCover': {en: 'Fetching album cover…', vi: 'Đang tải ảnh bìa album…'},
+  'lookup.selectedSave': {en: '{album} selected. Save to keep these details{coverSuffix}.', vi: 'Đã chọn {album}. Lưu để giữ các thông tin này{coverSuffix}.'},
+  'lookup.andCover': {en: ' and cover', vi: ' và ảnh bìa'},
+  'lookup.detailsReady': {en: 'Details ready to save.', vi: 'Thông tin đã sẵn sàng để lưu.'},
+  'lookup.coverUnavailable': {en: 'Cover preview unavailable. You can still save the selected details.', vi: 'Không xem trước được ảnh bìa. Bạn vẫn có thể lưu thông tin đã chọn.'},
+  'lookup.coverAlt': {en: '{album} cover', vi: 'Ảnh bìa {album}'},
+
+  'dialog.delete.deletedNotice': {en: 'Song deleted.', vi: 'Đã xóa bài hát.'},
+  'dialog.folder.title': {en: 'Output folder', vi: 'Thư mục xuất'},
+  'dialog.folder.sub': {en: 'Each song gets its own subfolder here with the original file and a <code>stems</code> folder.', vi: 'Mỗi bài hát có một thư mục con riêng chứa tệp gốc và thư mục <code>stems</code>.'},
+  'dialog.folder.parentFolder': {en: 'Parent folder', vi: 'Thư mục cha'},
+  'dialog.folder.up': {en: '↑ Up', vi: '↑ Lên'},
+  'dialog.folder.pathAriaLabel': {en: 'Folder path', vi: 'Đường dẫn thư mục'},
+  'dialog.folder.go': {en: 'Go', vi: 'Đi'},
+  'dialog.folder.createIfMissing': {en: "Create this folder if it doesn't exist", vi: 'Tạo thư mục này nếu chưa tồn tại'},
+  'dialog.folder.useThisFolder': {en: 'Use this folder', vi: 'Dùng thư mục này'},
+  'dialog.edit.title': {en: 'Edit details', vi: 'Sửa thông tin'},
+  'dialog.edit.saveChanges': {en: 'Save changes', vi: 'Lưu thay đổi'},
+  'dialog.delete.title': {en: 'Delete song?', vi: 'Xóa bài hát?'},
+  'dialog.delete.tail': {en: ' and all of its stems will be removed from disk.', vi: ' và tất cả track của nó sẽ bị xóa khỏi ổ đĩa.'},
+  'dialog.delete.keepIt': {en: 'Keep it', vi: 'Giữ lại'},
+  'dialog.delete.deletePermanently': {en: 'Delete permanently', vi: 'Xóa vĩnh viễn'},
+  'dialog.split.title': {en: 'Split guitar', vi: 'Tách guitar'},
+  'dialog.split.sub': {en: 'Choose a section of the guitar track for the lead and rhythm split. The guitar stem itself is not changed.', vi: 'Chọn một đoạn của track guitar để tách lead và rhythm. Track guitar gốc không bị thay đổi.'},
+  'dialog.split.submit': {en: 'Split into lead &amp; rhythm', vi: 'Tách thành lead & rhythm'},
+  'dialog.export.title': {en: 'Export stems', vi: 'Xuất track'},
+  'dialog.export.sub': {en: "Copies are written to this song's <code>exports</code> folder; existing files of the same name are replaced.", vi: 'Bản sao được ghi vào thư mục <code>exports</code> của bài hát này; tệp trùng tên sẽ bị ghi đè.'},
+  'dialog.export.formatsHeading': {en: 'Formats', vi: 'Định dạng'},
+  'dialog.export.stemsHeading': {en: 'Stems', vi: 'Track'},
+  'dialog.export.preventClipping': {en: 'Prevent clipping', vi: 'Chống clipping'},
+  'dialog.export.clipWarning': {en: 'Stems that peak above full scale will clip in lossy formats.', vi: 'Track có đỉnh âm vượt mức tối đa sẽ bị clip khi xuất ở định dạng nén.'},
+  'dialog.export.successMsg': {en: 'Export complete. The selected copies are ready.', vi: 'Xuất tệp hoàn tất. Các bản sao đã chọn đã sẵn sàng.'},
+  'dialog.export.openExportsFolder': {en: 'Open exports folder', vi: 'Mở thư mục xuất'},
+  'dialog.closeConfirm.title': {en: 'Close while splitting?', vi: 'Đóng khi đang tách?'},
+  'dialog.closeConfirm.message': {en: 'A separation or download is running. Closing will cancel it.', vi: 'Một quá trình tách nhạc hoặc tải xuống đang chạy. Đóng sẽ hủy nó.'},
+  'dialog.closeConfirm.closeAnyway': {en: 'Close anyway', vi: 'Vẫn đóng'},
+
+  'folders.noSubfolders': {en: 'No subfolders. You can select this folder.', vi: 'Không có thư mục con. Bạn có thể chọn thư mục này.'},
+  'folders.savingDefault': {en: 'Saving to the default output folder.', vi: 'Đang lưu vào thư mục mặc định.'},
+
+  'split.hint': {en: 'Times are shown in project time. The guitar stem itself is not changed.', vi: 'Thời gian hiển thị theo thời gian dự án. Track guitar gốc không bị thay đổi.'},
+
+  'new.notSupportedFile': {en: '{filename} is not a supported audio file.', vi: '{filename} không phải định dạng âm thanh được hỗ trợ.'},
+  'new.trim.readingDuration': {en: 'Reading the duration… You can still separate the full file.', vi: 'Đang đọc thời lượng… Bạn vẫn có thể tách toàn bộ tệp.'},
+  'new.trim.optional': {en: 'Optional: process only part of this song. The original file stays complete.', vi: 'Tùy chọn: chỉ xử lý một đoạn của bài hát. Tệp gốc vẫn được giữ nguyên.'},
+  'new.placeholderSongName': {en: '<song name>', vi: '<tên bài hát>'},
+  'new.placeholderVideoTitle': {en: '<video title>', vi: '<tên video>'},
+  'new.importFailed': {en: 'Import failed. Check the server terminal.', vi: 'Nhập tệp thất bại. Kiểm tra terminal của server.'},
+  'new.couldNotReachServer': {en: 'Could not reach the local server.', vi: 'Không thể kết nối tới server cục bộ.'},
+
+  'audio.loadFailed': {en: 'Could not load {name}. Refresh the library and try again. ({error})', vi: 'Không thể tải {name}. Hãy làm mới thư viện và thử lại. ({error})'},
+  'audio.couldNotLoad': {en: 'Audio could not load: {error} ', vi: 'Không thể tải âm thanh: {error} '},
+  'audio.retry': {en: 'Retry', vi: 'Thử lại'},
+  'audio.playingSectionFromStart': {en: 'Playing section 0:00 – {end} ({length} s)', vi: 'Đang phát đoạn 0:00 – {end} ({length} s)'},
+  'audio.playingSectionRange': {en: 'Playing section {start} – {end} ({length} s)', vi: 'Đang phát đoạn {start} – {end} ({length} s)'},
+  'audio.differentDurations': {en: 'These stems have different durations. Shorter tracks will end first.', vi: 'Các track này có độ dài khác nhau. Track ngắn hơn sẽ kết thúc trước.'},
+  'audio.splitGuitarTitle': {en: 'Split into lead and rhythm', vi: 'Tách thành lead và rhythm'},
+  'audio.muteLabel': {en: 'Mute {name}', vi: 'Tắt tiếng {name}'},
+  'audio.soloLabel': {en: 'Solo {name}', vi: 'Solo {name}'},
+  'audio.volumeLabel': {en: '{name} volume', vi: 'Âm lượng {name}'},
+  'audio.cancelPlaybackStart': {en: 'Cancel playback start', vi: 'Hủy bắt đầu phát'},
+  'audio.pause': {en: 'Pause', vi: 'Tạm dừng'},
+  'audio.play': {en: 'Play', vi: 'Phát'},
+
+  'player.slowerUnavailable': {en: 'Slower playback is unavailable in this browser. Choose 100% speed or use a current browser.', vi: 'Phát chậm không khả dụng trên trình duyệt này. Chọn tốc độ 100% hoặc dùng trình duyệt mới hơn.'},
+  'player.slowerPrepareFailed': {en: 'Could not prepare slower playback. Try again or choose 100% speed.', vi: 'Không thể chuẩn bị phát chậm. Hãy thử lại hoặc chọn tốc độ 100%.'},
+  'player.speedRange': {en: 'Playback speed must be between 50% and 100%.', vi: 'Tốc độ phát phải nằm trong khoảng 50% đến 100%.'},
+  'player.slowerStoppedUnexpected': {en: 'Slower playback stopped unexpectedly. Try playing again or choose 100% speed.', vi: 'Phát chậm đã dừng đột ngột. Hãy phát lại hoặc chọn tốc độ 100%.'},
+
+  'transport.speedPercent': {en: '{percent} percent of original speed', vi: '{percent} phần trăm tốc độ gốc'},
+
+  'nav.downloading': {en: 'Downloading', vi: 'Đang tải'},
+  'nav.settingUp': {en: 'Setting up', vi: 'Đang thiết lập'},
+  'nav.exporting': {en: 'Exporting', vi: 'Đang xuất tệp'},
+  'nav.splittingGuitar': {en: 'Splitting guitar', vi: 'Đang tách guitar'},
+  'nav.separating': {en: 'Separating', vi: 'Đang tách nhạc'},
+  'nav.jobPillText': {en: '{what} · {pct}%', vi: '{what} · {pct}%'},
+  'nav.jobQueued': {en: '{count} queued', vi: '{count} đang xếp hàng'},
+  'nav.jobWaiting': {en: '{count} waiting', vi: '{count} đang chờ'},
+  'about.open': {en: 'About Unweave', vi: 'Giới thiệu Unweave'},
+  'about.version': {en: 'Version {version} ·', vi: 'Phiên bản {version} ·'},
+  'about.tagline': {en: 'Split songs into stems, right on your computer.', vi: 'Tách bài hát thành từng track, ngay trên máy tính của bạn.'},
+  'about.basedOn': {en: 'Based on', vi: 'Dựa trên'},
+  'about.models': {en: 'AI models', vi: 'Mô hình AI'},
+  'about.builtWith': {en: 'Built with', vi: 'Xây dựng bằng'},
+  'about.data': {en: 'Song info & covers', vi: 'Thông tin bài hát & ảnh bìa'},
+  'about.licenseNotStated': {en: 'license not stated', vi: 'chưa rõ giấy phép'},
+  'about.fullList': {en: 'Full credits and licenses', vi: 'Danh sách đầy đủ và giấy phép'},
+
+  'updates.check': {en: 'Check for updates', vi: 'Kiểm tra cập nhật'},
+  'updates.consentTitle': {en: 'Check for updates?', vi: 'Kiểm tra cập nhật?'},
+  'updates.consentBody': {en: 'Unweave can check GitHub for newer versions. No account — only a version lookup.', vi: 'Unweave có thể kiểm tra GitHub xem có bản mới hơn không. Không cần tài khoản — chỉ tra phiên bản.'},
+  'updates.dontAskAgain': {en: 'Don’t ask again', vi: 'Không hỏi lại'},
+  'updates.allow': {en: 'Allow', vi: 'Cho phép'},
+  'updates.notNow': {en: 'Not now', vi: 'Để sau'},
+  'updates.openDownload': {en: 'Open download', vi: 'Mở trang tải'},
+  'updates.later': {en: 'Later', vi: 'Để sau'},
+  'updates.available': {en: 'Version {latest} is available — you have {current}.', vi: 'Đã có phiên bản {latest} — bạn đang dùng {current}.'},
+  'updates.availableNotice': {en: 'Version {latest} is available.', vi: 'Đã có phiên bản {latest}.'},
+  'updates.upToDate': {en: 'You’re up to date.', vi: 'Bạn đang dùng bản mới nhất.'},
+  'queue.title': {en: 'Job queue', vi: 'Hàng đợi'},
+  'queue.sub': {en: 'Jobs run one after another. Different songs can run side by side when your computer has room.', vi: 'Các tác vụ chạy lần lượt. Nhiều bài khác nhau có thể chạy song song nếu máy đủ mạnh.'},
+  'queue.empty': {en: 'Nothing is running or waiting.', vi: 'Không có tác vụ nào đang chạy hoặc đang chờ.'},
+  'queue.position': {en: 'Waiting · #{position} in line', vi: 'Đang chờ · thứ {position}'},
+  'queue.open': {en: 'Open', vi: 'Mở'},
+  'queue.youtubeTitle': {en: 'YouTube import', vi: 'Nhập từ YouTube'},
+  'queue.setupTitle': {en: 'Setup', vi: 'Thiết lập'},
+  'queue.waitingTitle': {en: 'Waiting in queue · #{position}', vi: 'Đang chờ trong hàng đợi · thứ {position}'},
+  'queue.waitingSub': {en: 'This starts automatically when the jobs ahead of it finish.', vi: 'Tác vụ sẽ tự bắt đầu khi các tác vụ phía trước xong.'},
+  'nav.exportedNotice': {en: 'Exported {count} stems as {formats}.', vi: 'Đã xuất {count} track dưới dạng {formats}.'},
+  'nav.songReadyNotice': {en: '{title} is ready: {count} stems saved.', vi: '{title} đã sẵn sàng: đã lưu {count} track.'},
+  'nav.defaultSongTitle': {en: 'Song', vi: 'Bài hát'},
+  'nav.connectionProblem': {en: 'Connection problem: {error}', vi: 'Lỗi kết nối: {error}'},
+
+  'core.requestFailed': {en: 'Request failed ({status})', vi: 'Yêu cầu thất bại ({status})'},
+  'covers.unavailable': {en: 'Cover unavailable', vi: 'Không có ảnh bìa'},
+};
+
+const STORAGE_KEY = 'unweave-lang';
+const LEGACY_STORAGE_KEY = 'sound-razor-lang';
+function detectDefault() {
+  try { return (navigator.language || '').toLowerCase().startsWith('vi') ? 'vi' : 'en'; }
+  catch (_) { return 'en'; }
+}
+function readLang() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (saved && !localStorage.getItem(STORAGE_KEY)) {
+      localStorage.setItem(STORAGE_KEY, saved);
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }
+    return saved || detectDefault();
+  } catch (_) {
+    return detectDefault();
+  }
+}
+let lang = readLang();
+
+const listeners = new Set();
+
+export function t(key, vars) {
+  const entry = STRINGS[key];
+  let str = entry ? (entry[lang] || entry.en) : key;
+  if (vars) for (const [k, v] of Object.entries(vars)) str = str.replaceAll(`{${k}}`, v);
+  return str;
+}
+
+export function getLang() { return lang; }
+
+export function translateStatic() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.innerHTML = t(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const text = t(el.getAttribute('data-i18n-title'));
+    el.title = text; el.setAttribute('aria-label', text);
+  });
+  // Title-only: for elements that already have visible/descriptive text content, where an
+  // aria-label would override that text for screen readers instead of just adding a tooltip.
+  document.querySelectorAll('[data-i18n-tooltip]').forEach(el => { el.title = t(el.getAttribute('data-i18n-tooltip')); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.getAttribute('data-i18n-placeholder')); });
+}
+
+export function onLangChange(fn) { listeners.add(fn); }
+
+export function setLang(next) {
+  if (next === lang) return;
+  lang = next;
+  try {
+    localStorage.setItem(STORAGE_KEY, next);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  } catch (_) { /* private mode etc. */ }
+  translateStatic();
+  listeners.forEach(fn => fn());
+}
+
+translateStatic();

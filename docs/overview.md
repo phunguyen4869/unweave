@@ -11,14 +11,13 @@ It is based on [Sound Razor](https://github.com/pedromtcosta/sound-razor) by ped
 which supplies the separation core. Unweave adds a rewritten UI, an advanced separation
 plan, export, a job queue, and a native desktop install.
 
-The Python package is still called `sound_razor` and the cache still lives in
-`.sound-razor/` — that is deliberate, not a leftover: renaming them would break existing
-installs and split this fork further from upstream.
+The Python package is `unweave` (`app/unweave/`). The on-disk model/cache folder stays
+`.sound-razor/` so existing installs keep their downloaded weights without a migration.
 
 ## Two layers
 
-### 1. Python application (`app/sound_razor/`)
-- **CLI** — `python -m sound_razor` with `separate`, `split-guitar` and `ui` commands.
+### 1. Python application (`app/unweave/`)
+- **CLI** — `python -m unweave` with `separate`, `split-guitar` and `ui` commands.
 - **Separation pipeline** — `audio/pipeline.py`. FFmpeg normalises the input, a
   pretrained model runs inference, stems are assembled and published atomically.
 - **Guitar split** — `audio/guitar_split.py`, using a vendored Mel-Band RoFormer to split
@@ -48,7 +47,7 @@ installs and split this fork further from upstream.
 ```
 unweave/
 ├── app/
-│   ├── sound_razor/          # Python application package
+│   ├── unweave/          # Python application package
 │   │   ├── audio/            # pipeline.py, guitar_split.py, model_cache.py,
 │   │   │                     # exports.py, output_files.py, sources.py
 │   │   ├── projects/         # store.py (project format), metadata.py (MusicBrainz)

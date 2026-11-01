@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from sound_razor import tools
+from unweave import tools
 
 
 class LegacyDataDirTests(unittest.TestCase):

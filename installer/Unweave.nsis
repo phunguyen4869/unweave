@@ -18,10 +18,10 @@
 ;      ..
 ;
 ;      import site
-;    — the blank "..":  sound_razor/ and ui_entrypoint.py are installed as
+;    — the blank "..":  unweave/ and ui_entrypoint.py are installed as
 ;    runtime\'s SIBLINGS ($INSTDIR, not $INSTDIR\runtime), and embeddable
 ;    Python otherwise only searches its own folder + site-packages, so
-;    `import sound_razor` fails with ModuleNotFoundError without it —
+;    `import unweave` fails with ModuleNotFoundError without it —
 ;    this broke every installed copy until caught by actually running the
 ;    real installed exe, not just testing against a dev venv that already
 ;    had the package pip-installed.
@@ -36,7 +36,7 @@
 !include "MUI2.nsh"
 
 !define NAME "Unweave"
-!define VERSION "1.3.1"
+!define VERSION "1.4.0"
 !define PACKAGE_NAME "Unweave-Setup-x64"
 !define REG_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${NAME}"
 ; The app was called SoundRazer Desktop up to 1.2.2 (see .onInit).
@@ -103,7 +103,7 @@ Section "${NAME}" SecMain
   SetOutPath "$INSTDIR\runtime"
   File /r "embedded\runtime\*"
   ; Puts setup's packages (%LOCALAPPDATA%\Unweave\packages) on the runtime's sys.path and
-  ; keeps the shared per-user site-packages out (prepare_embedded_runtime in sound_razor/tools.py).
+  ; keeps the shared per-user site-packages out (prepare_embedded_runtime in unweave/tools.py).
   SetOutPath "$INSTDIR\runtime\Lib\site-packages"
   File "unweave.pth"
   SetOutPath "$INSTDIR"
@@ -133,7 +133,7 @@ Section "${NAME}" SecMain
   WriteRegStr HKLM "${REG_KEY}" "Publisher" "um1chc5"
   WriteRegStr HKLM "${REG_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegDWORD HKLM "${REG_KEY}" "VersionMajor" 1
-  WriteRegDWORD HKLM "${REG_KEY}" "VersionMinor" 3
+  WriteRegDWORD HKLM "${REG_KEY}" "VersionMinor" 4
   WriteRegDWORD HKLM "${REG_KEY}" "NoModify" 1
   WriteRegDWORD HKLM "${REG_KEY}" "NoRepair" 1
 SectionEnd
@@ -157,7 +157,8 @@ Section "Uninstall"
   Delete "$INSTDIR\ui_entrypoint.py"
   Delete "$INSTDIR\launch.bat"
   Delete "$INSTDIR\Unweave.exe"
-  RMDir /r "$INSTDIR\sound_razor"
+  RMDir /r "$INSTDIR\unweave"
+  RMDir /r "$INSTDIR\sound_razor"  ; pre-rename package folder, if an old install left it
   RMDir /r "$INSTDIR\__pycache__"
   RMDir /r "$INSTDIR\unweave.egg-info"
   RMDir /r "$INSTDIR\soundrazer_desktop.egg-info"
@@ -178,6 +179,8 @@ Section "Uninstall"
     RMDir /r "$LOCALAPPDATA\${NAME}\models"
     Delete "$LOCALAPPDATA\${NAME}\ui.json"
     Delete "$LOCALAPPDATA\${NAME}\launch.log"
+    ; Per-job process logs; without this the folder (and so the parent) survived "Yes".
+    RMDir /r "$LOCALAPPDATA\${NAME}\logs"
   keep_data:
   RMDir "$LOCALAPPDATA\${NAME}"
 SectionEnd

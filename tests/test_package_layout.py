@@ -4,11 +4,11 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-import sound_razor.webui as webui
-import sound_razor.webui.server as server
-import sound_razor.audio.pipeline
-import sound_razor.projects as projects
-import sound_razor.projects.metadata
+import unweave.webui as webui
+import unweave.webui.server as server
+import unweave.audio.pipeline
+import unweave.projects as projects
+import unweave.projects.metadata
 
 
 class PackageLayoutTests(unittest.TestCase):
@@ -35,16 +35,17 @@ class PackageLayoutTests(unittest.TestCase):
     def test_static_assets(self):
         static = Path(server.__file__).resolve().parents[1] / "web"
         self.assertEqual(server.STATIC, static)
-        for name in ("index.html", "js/app.js", "js/trim.js", "js/split.js", "css/base.css"):
+        for name in ("index.html", "js/app.js", "js/trim.js", "js/split.js", "js/updates.js",
+                     "css/base.css"):
             with self.subTest(asset=name):
                 self.assertTrue((static / name).is_file())
 
     def test_old_root_modules_are_gone(self):
         for name in ("ui", "pipeline", "guitar_split", "metadata_lookup", "setup"):
             with self.subTest(module=name):
-                self.assertIsNone(importlib.util.find_spec(f"sound_razor.{name}"))
+                self.assertIsNone(importlib.util.find_spec(f"unweave.{name}"))
 
-        # `sound_razor.projects` remains importable as the requested subpackage,
+        # `unweave.projects` remains importable as the requested subpackage,
         # but the old projects.py module has been moved into projects/store.py.
         self.assertTrue(Path(projects.__file__).name == "__init__.py")
         self.assertFalse(Path(projects.__file__).with_name("projects.py").exists())

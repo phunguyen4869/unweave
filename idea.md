@@ -8,7 +8,7 @@ Package Sound Razor into a single `.exe` installer so non-technical users can in
 ### 1. Small bootstrap installer (Inno Setup, ~5 MB)
 The installer itself is tiny. It does NOT bundle torch, onnxruntime, or the app. Instead it:
 - Installs Python 3.11 if missing (via embedded Python embeddable package)
-- Installs `uv` and the sound-razor package with all extras
+- Installs `uv` and the unweave package with all extras
 - Installs FFmpeg (bundled or downloaded)
 - Creates Start Menu + Desktop shortcuts
 - Downloads model weights on first separation (already automatic)
@@ -35,7 +35,7 @@ Alternative if Rust is desired: **Tauri** — but that requires rewriting the ba
 ### Build flow (developer)
 ```sh
 # 1. (Optional) Build a frozen single-file exe with PyInstaller for faster first launch
-pyinstaller --onefile --windowed sound_razor/ui_entrypoint.py
+pyinstaller --onefile --windowed unweave/ui_entrypoint.py
 
 # 2. Compile the Inno Setup bootstrap installer
 iscc SoundRazor.iss
@@ -47,7 +47,7 @@ First launch downloads ~500 MB of Python deps + FFmpeg + models in the backgroun
 Total disk usage after install: ~600 MB (deps + models + app).
 
 ### Files to create
-- `sound_razor/ui.py` — add pywebview wrapper (optional, behind a flag)
+- `unweave/ui.py` — add pywebview wrapper (optional, behind a flag)
 - `installer/ SoundRazor.iss` — Inno Setup script
 - `installer/ bootstrap.ps1` — download + install logic
 - `idea.md` — this file

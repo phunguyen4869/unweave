@@ -72,10 +72,11 @@ FFmpeg is used for normalization, section trimming, export conversion, and media
 | Setup | Show required and optional setup components and their stage progress; gate actions until required setup is complete. See [04 — First-run setup](04-first-run-setup.md). |
 | Player | Web Audio playback of original and stems, with SoundTouch worklet support for tempo/pitch-preserving speed changes. Trimmed projects play as a section from 0 to the section length. |
 | Transport and mixer | Seek/play/pause, track mute/solo, volume, and synchronized stem playback. |
-| Progress | Job status, stage progress, logs, and cancellation where supported. |
+| Progress | Job status, stage progress, logs, and cancellation where supported. Overall `%` is time-weighted for dual-pass jobs; the detail panel is step-first (ring / step time left) with a labelled whole-job line; see [09 — Job progress and ETA](09-job-progress.md). |
 | Metadata lookup | Optional MusicBrainz and Cover Art Archive lookup; results can populate project metadata. |
 | Folder picker | Desktop bridge supports choosing a local project-library folder. |
 | Window chrome | Desktop title bar and app controls are provided by the desktop shell, not browser chrome. |
+| About / updates | Version and credits; optional GitHub Releases check after consent. See [10 — In-app update check](10-updates.md). |
 
 ## First-run setup
 

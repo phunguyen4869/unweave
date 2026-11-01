@@ -7,15 +7,16 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from sound_razor.audio import pipeline
-from sound_razor.webui.library import JobLog, Library, prune_job_logs
+from unweave.audio import pipeline
+from unweave.webui.library import (FINALIZE_FUDGE, GUITAR_TIME_RATIO, JobLog, Library,
+                                        SEPARATE_RANGE, prune_job_logs)
 
 
 class JobQueueTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         base = Path(self.temporary.name)
-        with mock.patch.dict(os.environ, {"SOUND_RAZOR_MAX_CONCURRENT_JOBS": "2"}):
+        with mock.patch.dict(os.environ, {"UNWEAVE_MAX_CONCURRENT_JOBS": "2"}):
             self.library = Library(base / "projects", base / "ui.json", base / "cache")
         self.release = {}
 
@@ -101,13 +102,16 @@ class JobQueueTests(unittest.TestCase):
 
 
 class ProgressTrackingTests(unittest.TestCase):
-    """A separation that also splits the guitar runs two inference passes in one
-    phase; the bar must keep moving through the second (slow) pass instead of
-    pinning at the 'Writing stems' floor and looking stuck."""
+    """Overall progress is elapsed/(elapsed+ETA) over SEPARATE_RANGE. A ~10× prior
+    projects the guitar pass only while Demucs is still running; once guitar reports
+    timing, measured Demucs duration + live guitar ETA own the bar."""
 
     def job(self, split_leaves):
         return {"kind": "separate", "split_leaves": split_leaves, "status": "running",
-                "started": time.time(), "phase": "prepare", "progress": 0, "eta": None}
+                "started": time.time(), "phase": "prepare", "progress": 0, "eta": None,
+                "step_progress": 0, "step_eta": None, "step_eta_at": None,
+                "eta_estimated": False, "pass_count": 2 if split_leaves else 1,
+                "pass_index": 1}
 
     def progress(self, job, lines):
         library = object.__new__(Library)
@@ -117,19 +121,67 @@ class ProgressTrackingTests(unittest.TestCase):
             seen.append(job["progress"])
         return seen
 
+    def test_prepare_and_load_floors_stay_small(self):
+        job = self.job(True)
+        self.progress(job, ["Preparing audio", "Loading model"])
+        self.assertLess(job["progress"], SEPARATE_RANGE[0] + 1)
+
+    def test_demucs_eta_includes_projected_guitar(self):
+        job = self.job(True)
+        self.progress(job, [
+            "Separating with htdemucs_6s.yaml; model outputs: vocals",
+            " 50%|##| 20/40 [01:00<01:00, 3.0s/it]",
+        ])
+        demucs_only = 60.0  # tqdm remaining
+        self.assertGreater(job["eta"], demucs_only + FINALIZE_FUDGE)
+        # Prior: est_demucs_total (120s) * GUITAR_TIME_RATIO
+        self.assertGreater(job["eta"], demucs_only + 100)
+        # Detail panel shows pass-local remaining; whole-job ETA still includes guitar.
+        self.assertEqual(job["step_eta"], demucs_only)
+        self.assertTrue(job["eta_estimated"])
+        self.assertEqual(job["pass_count"], 2)
+        self.assertEqual(job["pass_index"], 1)
+
+    def test_after_demucs_overall_stays_low_when_guitar_will_dominate(self):
+        job = self.job(True)
+        self.progress(job, [
+            "Separating with htdemucs_6s.yaml; model outputs: vocals",
+            "100%|##| 40/40 [02:10<00:00, 3.2s/it]",
+        ])
+        # done/(done+10*done) → ~1/11 of the inference band ≈ 13, not the old ~70.
+        self.assertLess(job["progress"], 25)
+        self.assertGreater(job["progress"], SEPARATE_RANGE[0])
+
     def test_the_guitar_pass_advances_the_bar(self):
         job = self.job(True)
-        seen = self.progress(job, [
+        self.progress(job, [
             "Separating with htdemucs_6s.yaml; model outputs: vocals",
             "100%|##| 40/40 [02:10<00:00, 3.2s/it]",
             "Splitting guitar",
-            *[f"Guitar split {n}%" for n in (25, 50, 75, 100)],
         ])
-        guitar = seen[-4:]
-        self.assertEqual(guitar, sorted(guitar), "progress must never go backwards")
-        self.assertGreater(guitar[-1] - guitar[0], 15,
-                           f"the guitar pass barely moved the bar: {guitar}")
-        self.assertLess(guitar[-1], 96, "the split must finish before 'Writing stems'")
+        job["demucs_elapsed"] = 130.0
+        after_demucs = job["progress"]
+        # Prior-based guitar ticks until the pass has a real wall clock.
+        seen = self.progress(job, [f"Guitar split {n}%" for n in (25, 50, 75, 100)])
+        self.assertEqual(seen, sorted(seen), "progress must never go backwards")
+        self.assertGreater(seen[-1] - after_demucs, 40,
+                           f"guitar should own most of the bar: {after_demucs} → {seen}")
+        self.assertEqual(seen[-1], SEPARATE_RANGE[1])
+
+    def test_mid_guitar_is_not_stuck_near_old_fixed_band(self):
+        job = self.job(True)
+        self.progress(job, [
+            "Separating with htdemucs_6s.yaml; model outputs: vocals",
+            "100%|##| 40/40 [02:10<00:00, 3.2s/it]",
+            "Splitting guitar",
+        ])
+        job["demucs_elapsed"] = 130.0
+        # Cold guitar clock (spent≈0) uses the ~10× prior until wall time is usable.
+        self.progress(job, ["Guitar split 30%"])
+        # done=130+0.3*1300, left=0.7*1300 → ~37% of the band, not the old ~77.
+        self.assertLess(job["progress"], 55)
+        self.assertGreater(job["progress"], 30)
+        self.assertEqual(job["step_progress"], 30)
 
     def test_without_a_split_the_whole_bar_belongs_to_the_model(self):
         job = self.job(False)
@@ -137,34 +189,40 @@ class ProgressTrackingTests(unittest.TestCase):
             "Separating with htdemucs_6s.yaml; model outputs: vocals",
             "100%|##| 40/40 [02:10<00:00, 3.2s/it]",
         ])
-        self.assertEqual(seen[-1], 95)
+        self.assertEqual(seen[-1], SEPARATE_RANGE[1])
+        self.assertFalse(job["eta_estimated"])
+        self.assertEqual(job["pass_count"], 1)
 
     def test_each_step_owns_its_own_percentage(self):
-        # The dialog's ring restarts per step, so a 10x guitar pass starts at 0 again
-        # instead of crawling through the last slice of the stem pass's bar.
+        # The dialog's ring restarts per step, so a 10x guitar pass starts at 0 again.
         job = self.job(True)
         self.progress(job, [
             "Separating with htdemucs_6s.yaml; model outputs: vocals",
             " 60%|##| 24/40 [01:00<00:40, 2.5s/it]",
         ])
         self.assertGreater(job["step_progress"], 50)
-        stem_step = job["step_progress"]
+        demucs_overall = job["progress"]
         self.progress(job, ["Splitting guitar"])
         self.assertEqual(job["step_progress"], 0, "the split must start its own gauge")
+        self.assertIsNone(job["step_eta"])
+        self.assertEqual(job["pass_index"], 2)
+        job["demucs_elapsed"] = 100.0
         self.progress(job, ["Guitar split 30%"])
         self.assertEqual(job["step_progress"], 30)
-        self.assertGreater(job["progress"], stem_step - 1, "the overall bar keeps climbing")
+        self.assertGreater(job["progress"], demucs_overall, "the overall bar keeps climbing")
+        self.assertTrue(job["eta_estimated"], "cold guitar clock still uses the prior")
+        self.assertIsNotNone(job["step_eta"])
+        self.assertLess(job["step_eta"], job["eta"])
 
     def test_saving_stems_does_not_reset_the_ring(self):
         # "Writing stems" has no sub-progress; resetting there made the ring snap from
         # 100% back to 0% for the last second of every job.
         job = self.job(True)
+        job["demucs_elapsed"] = 60.0
         self.progress(job, ["Splitting guitar", "Guitar split 100%", "Writing stems"])
         self.assertEqual(job["step_progress"], 100)
 
     def test_the_guitar_pass_is_its_own_phase(self):
-        # The UI turns the phase into a step chip, a title and a colour, so the second
-        # slower pass must not hide inside "separate".
         job = self.job(True)
         self.progress(job, [
             "Separating with htdemucs_6s.yaml; model outputs: vocals",
@@ -175,13 +233,30 @@ class ProgressTrackingTests(unittest.TestCase):
         self.assertEqual(job["phase"], "guitar")
 
     def test_a_split_only_job_starts_its_bar_low(self):
-        # No Demucs pass runs first, so the guitar model owns the whole bar instead of
-        # inheriting the 70% that a two-pass job has already consumed.
+        # No Demucs pass — no 10× prior against a phantom stem pass.
         job = self.job(False)
         job["kind"] = "split-guitar"
         self.progress(job, ["Splitting guitar", "Guitar split 0%"])
         self.assertEqual(job["phase"], "guitar")
         self.assertLess(job["progress"], 20)
+        self.assertNotIn("demucs_elapsed", job)
+
+    def test_guitar_eta_uses_live_timing_once_the_clock_is_warm(self):
+        job = self.job(True)
+        self.progress(job, [
+            "Separating with htdemucs_6s.yaml; model outputs: vocals",
+            "100%|##| 40/40 [02:10<00:00, 3.2s/it]",
+            "Splitting guitar",
+        ])
+        job["demucs_elapsed"] = 130.0
+        self.progress(job, ["Guitar split 1%"])  # establishes sample_started
+        job["sample_started"] = time.time() - 130.0
+        self.progress(job, ["Guitar split 50%"])
+        # Live remaining ≈ 130s + finalize — not another full 10× demucs prior.
+        self.assertLess(job["eta"], 130.0 * GUITAR_TIME_RATIO)
+        self.assertGreater(job["eta"], 100.0)
+        self.assertFalse(job["eta_estimated"])
+        self.assertAlmostEqual(job["step_eta"], job["eta"] - FINALIZE_FUDGE, places=3)
 
     def test_writing_stems_is_announced_only_after_the_split(self):
         # Ordering in the CLI: the marker that jumps the bar to 96 must come last,
@@ -206,12 +281,12 @@ class JobLogTests(unittest.TestCase):
         self.temporary.cleanup()
 
     def test_every_line_including_hidden_progress_is_written(self):
-        log = JobLog(self.base, self.job, ["python", "-m", "sound_razor", "separate"])
+        log = JobLog(self.base, self.job, ["python", "-m", "unweave", "separate"])
         log.write("Separating with htdemucs_6s.yaml")
         log.write("Guitar split 50%")   # hidden from the UI log, kept here
         log.close("cancelled")
         text = log.path.read_text(encoding="utf-8")
-        self.assertIn("-m sound_razor separate", text)
+        self.assertIn("-m unweave separate", text)
         self.assertIn("Guitar split 50%", text)
         self.assertIn("# status   cancelled", text)
 

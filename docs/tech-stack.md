@@ -1,6 +1,6 @@
 # Technical Stack
 
-## Core (`app/sound_razor/`)
+## Core (`app/unweave/`)
 
 | Layer | Technology | Why |
 |---|---|---|

@@ -88,7 +88,7 @@ and troubleshooting.
 
 Unweave is based on [Sound Razor](https://github.com/pedromtcosta/sound-razor) created by **[pedromtcosta](https://github.com/pedromtcosta)**. All core audio separation functionality comes from the original Sound Razor project. Unweave adds a native window wrapper, improved UI design, simplified installation, a job queue and more.
 
-It also stands on the work of these people and projects. The app downloads the models and the separation libraries during setup rather than shipping them; the Mel-Band RoFormer code is included in [`app/sound_razor/vendor/roformer`](app/sound_razor/vendor/roformer) with its license.
+It also stands on the work of these people and projects. The app downloads the models and the separation libraries during setup rather than shipping them; the Mel-Band RoFormer code is included in [`app/unweave/vendor/roformer`](app/unweave/vendor/roformer) with its license.
 
 ### AI models
 

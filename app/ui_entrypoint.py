@@ -58,7 +58,7 @@ def writable_dirs():
     Documents folder, not a guessed %USERPROFILE%\\Documents that may silently diverge
     from what Explorer actually shows the user as "Documents".
     """
-    from sound_razor.tools import APP_NAME, app_data_dir as app_data, migrate_legacy_data_dir
+    from unweave.tools import APP_NAME, app_data_dir as app_data, migrate_legacy_data_dir
     migrate_legacy_data_dir()
     app_data_dir = app_data()
     documents = known_folder("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}",  # FOLDERID_Documents
@@ -118,6 +118,15 @@ class WindowControls:
     def close(self):
         self._window.destroy()
 
+    def pick_folder(self, start: str | None = None) -> str | None:
+        """The OS folder picker; blocks this server thread until the user answers."""
+        dialog = webview.FileDialog.FOLDER if hasattr(webview, "FileDialog") else webview.FOLDER_DIALOG
+        directory = start if start and Path(start).is_dir() else ""
+        chosen = self._window.create_file_dialog(dialog, directory=directory)
+        if not chosen:
+            return None
+        return chosen if isinstance(chosen, str) else chosen[0]
+
     def bounds(self):
         w = self._window
         return {"x": w.x, "y": w.y, "width": w.width, "height": w.height}
@@ -153,7 +162,7 @@ def main():
     port = 8765
 
     # Use the CLI to start the UI server
-    from sound_razor.webui import serve
+    from unweave.webui import serve
     from pathlib import Path
 
     # Created before the window exists and handed straight to serve(): it's only ever

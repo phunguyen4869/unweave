@@ -1,6 +1,6 @@
 # 05 — Job queue and concurrency
 
-Status: Done (Phase 1)
+Status: Done
 
 What this covers: why only one job runs at a time, what the real limit is, and the
 planned change from *rejecting* concurrent requests to *queueing* them (with an
@@ -16,7 +16,7 @@ if self.running() or self.worker is not None and self.worker.is_alive():
     raise ValueError("Another download or separation is already running.")
 ```
 
-That guard appears in four places in [`webui/library.py`](../../app/sound_razor/webui/library.py):
+That guard appears in four places in [`webui/library.py`](../../app/unweave/webui/library.py):
 `start()` (separation), `import_youtube()`, `start_setup()`, and `start_export()`.
 
 The limit is a consequence of the data model, not a resource check. `Library` holds
@@ -32,7 +32,7 @@ threading-adjacent calls are `torch.set_num_threads(4)` inside guitar split (bou
 
 ## Why the limit exists (and is defensible)
 
-Each job shells out to a **fresh `sound_razor` subprocess**, so per-process costs are
+Each job shells out to a **fresh `unweave` subprocess**, so per-process costs are
 paid per job. Measured import cost on a clean interpreter:
 
 | Stage | Cumulative RSS |
@@ -73,9 +73,10 @@ Per-job logs are now keyed by job id, so progress lines stay attributable.
 
 ## Remaining work
 
-- [ ] Phase 2 (optional, later): `max_concurrent_jobs` setting with a derived default (`1` on CPU, `2–3` with CUDA, capped by RAM), surfaced as an advanced setting with a warning.
-- [ ] Decide what happens to queued jobs when the window closes (see [06 — Close behavior](06-close-behavior.md)).
-- [ ] Queue depth limit: currently unbounded; decide whether to cap it.
+- [x] Phase 2 derived cap: `_derive_max_concurrent_jobs()` gives `1` on a CPU build of torch and `3` on a CUDA build, capped at one job per 3 GB of RAM; `UNWEAVE_MAX_CONCURRENT_JOBS` overrides it. The CUDA check reads torch's files (`setup_env.torch_has_cuda()`) instead of importing torch into the UI process, and RAM is read with `GlobalMemoryStatusEx` on Windows, where `os.sysconf` does not exist.
+- [x] Decided: **no** in-app concurrency setting. On CPU the right value is 1; a visible knob mostly lets users slow the app down. The env variable covers power users.
+- [x] Decided: queued jobs are cancelled when the window closes (see [06 — Close behavior](06-close-behavior.md)).
+- [x] Decided: **no** queue depth limit. Queued jobs cost nothing until they start, and each start re-checks disk space ([07](07-disk-usage.md)).
 
 ## Constraints
 
@@ -92,3 +93,5 @@ Per-job logs are now keyed by job id, so progress lines stay attributable.
 - [04 — First-run setup](04-first-run-setup.md) — setup runs as a job too, so it is
   subject to the same queue.
 - [06 — Close behavior](06-close-behavior.md) — interaction with queued jobs.
+- [09 — Job progress and ETA](09-job-progress.md) — how queue/nav `progress` and detail
+  step timers are derived (especially with guitar split).

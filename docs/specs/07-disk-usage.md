@@ -1,6 +1,6 @@
 # 07 — Disk usage, cache, and uninstall
 
-Status: Done (Phase 1 — WAV→FLAC canonical stems + stale-staging sweep)
+Status: Done (Phase 2 — FLAC stems, staging sweep, uninstall prompt, disk precheck; Linux purge, size UI and README note remain)
 
 What this covers: everywhere the app writes to disk, what the realistic footprint is,
 where the genuine disk-abuse risks are, and what the uninstallers do and do not
@@ -17,7 +17,7 @@ remove.
 | Downloaded FFmpeg | `$INSTDIR` (beside the app) | `~/.local/share/unweave/app/` | Yes (Windows) |
 
 Resolved in [`ui_entrypoint.py`](../../app/ui_entrypoint.py) (`writable_dirs()`) and
-[`tools.py`](../../app/sound_razor/tools.py).
+[`tools.py`](../../app/unweave/tools.py).
 
 ### Why models are not in the app folder
 
@@ -91,15 +91,14 @@ So the ordering of concern is:
 5. **Cover images** — small, content-addressed (`cover-<sha256[:20]>`), and skipped
    when already present, so effectively bounded.
 
-There is **no** disk-space precheck anywhere, and **no** cache size cap or eviction.
-A user on a small SSD could fill the disk mid-separation with no warning; the failure
-would surface as a confusing FFmpeg or model error rather than "out of space".
+There is **no** cache size cap or eviction (the cache is bounded, so none is needed).
+Jobs that write audio now check free space first; see the disk-space precheck below.
 
 ## Uninstall behavior
 
 **Windows** (`installer/Unweave.nsis`, `Section "Uninstall"`) removes only:
 
-- `$INSTDIR` contents (app, `sound_razor/`, `runtime/`, `launch.bat`, `ui_entrypoint.py`,
+- `$INSTDIR` contents (app, `unweave/`, `runtime/`, `launch.bat`, `ui_entrypoint.py`,
   docs, icon) and `$INSTDIR` itself
 - Start Menu folder and the desktop shortcut
 - The `HKLM` uninstall registry key
@@ -120,11 +119,12 @@ so the user knows what remains.
    reads/writes FLAC via `soundfile`. Web player audio route serves `audio/flac` for `.flac`
    stems, `audio/wav` for legacy `.wav` stems. Backward compatible: existing `.wav` stems
    are still detected and played.
-2. **Offer to delete the model cache on uninstall** — not done (see remaining work).
+2. **Offer to delete the model cache on uninstall** — done on Windows (NSIS prompt);
+   Linux `--purge` remains.
 3. **Prune `guitar.wav` after a successful guitar split** — done implicitly: new projects
    store `guitar.flac` only when no split exists; once split into `lead.flac` + `rhythm.flac`,
    `guitar.flac` is excluded from the stem list. Legacy `guitar.wav` projects behave the same.
-4. **Add a disk-space precheck** before a job — not done (see remaining work).
+4. **Add a disk-space precheck** before a job — done (see below).
 5. **Sweep stale staging directories at startup** — done in spec 06 (shared implementation:
    `Library.sweep_stale_staging()`, called at end of `Library.__init__`).
 6. **Surface sizes in the UI** — not done (see remaining work).
@@ -157,13 +157,40 @@ Expected reduction: **~40–50% off stem storage on every project**.
 
 ## Remaining work
 
-- [ ] Confirm the pywebview host decodes FLAC in `<audio>` before shipping the
-      WAV→FLAC change.
-- [ ] Add the uninstall prompt for models/settings (NSIS) and `--purge` (Linux).
-- [ ] Implement the disk-space precheck with a clear error message.
-- [ ] Decide whether old exports should be replaced wholesale per export run.
-- [ ] Add per-project / total size display and selective cleanup to the UI.
+- [x] FLAC plays in the pywebview `<audio>` element; FLAC stems have shipped.
+- [x] Windows uninstall prompt: `Unweave.nsis` asks "Also delete the downloaded AI
+      models (~500 MB) and app settings?" (default No; projects are never touched).
+- [ ] Linux `--purge` for `install-linux.sh --uninstall`. Small; bundle with the next
+      Linux installer change.
+- [x] Disk-space precheck (see below).
+- [x] Decided: old exports are **not** replaced wholesale. Deleting files the user
+      exported, without asking, is riskier than the growth; a per-project "Clear
+      exports" action belongs in the cleanup UI below.
+- [ ] Per-project / total size display and selective cleanup in the UI. Deferred
+      until users ask; `describe_project()` already returns `bytes` per stem, so a
+      per-project total is cheap when it is wanted.
 - [ ] Document stem-size amplification in the README.
+
+### Disk-space precheck (done)
+
+`tools.require_free_space(path, needed)` refuses a job up front with a plain message
+("Not enough disk space on C:\: this needs about 1.2 GB but only 300 MB is free. Free
+up some space and try again.") instead of letting a full disk surface mid-job as an
+FFmpeg or model error. It keeps 200 MB of headroom on top of the estimate. Sizes are
+estimated from 16-bit PCM (`PCM_BYTES_PER_SECOND`), which over-asks a little for FLAC:
+
+| Job | Drive checked | Estimate |
+|---|---|---|
+| Separation | project | duration × PCM × 6 stems (+3 with the guitar split: two 24-bit leaves) |
+| Separation | system temp | duration × PCM (the normalized `input.wav`) |
+| Guitar split only | project | current stems folder (copied into staging) + duration × PCM × 3 |
+| Export | project | chosen stems' bytes × per-format factor (`EXPORT_SIZE_FACTOR`: PCM 2.0, FLAC 1.0, lossy 0.2–0.3) |
+| Import upload | system temp and projects root | upload size |
+
+Duration honours the trim. Separation and export check again when the job actually
+starts, because queued jobs ahead of it may have used the space. A refused upload is
+read off the socket before answering, so the webview shows the message rather than a
+reset connection. YouTube imports are not prechecked (size unknown until download).
 
 ## Constraints
 

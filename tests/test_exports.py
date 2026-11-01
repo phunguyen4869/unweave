@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from sound_razor.audio.exports import FORMATS, export_stems
+from unweave.audio.exports import FORMATS, export_stems
 
 
 def make_project(root: Path) -> Path:
@@ -36,7 +36,7 @@ def fake_convert(source, destination, format_id, metadata, prevent_clipping,
 
 class ExportTests(unittest.TestCase):
     def setUp(self):
-        self.ffmpeg = patch("sound_razor.audio.exports.ensure_ffmpeg_on_path", return_value=True)
+        self.ffmpeg = patch("unweave.audio.exports.ensure_ffmpeg_on_path", return_value=True)
         self.ffmpeg.start()
         self.addCleanup(self.ffmpeg.stop)
 
@@ -53,8 +53,8 @@ class ExportTests(unittest.TestCase):
             exports = project / "exports"
             exports.mkdir()
             (exports / "guitar.mp3").write_bytes(b"keep me")
-            with patch("sound_razor.audio.exports.convert", side_effect=fake_convert), \
-                 patch("sound_razor.audio.exports.probe_duration", return_value=30.0):
+            with patch("unweave.audio.exports.convert", side_effect=fake_convert), \
+                 patch("unweave.audio.exports.probe_duration", return_value=30.0):
                 result = export_stems(project, ["vocals.wav"], ["flac", "mp3"], True)
             self.assertEqual({path.name for path in result}, {"vocals.flac", "vocals.mp3"})
             self.assertEqual((exports / "vocals.flac").read_bytes(), b"vocals-data")

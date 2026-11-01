@@ -33,7 +33,7 @@ support).
 
 ### 2. First-run setup (inside the app)
 
-`app/sound_razor/setup_env.py` detects what is missing and installs it on request, behind
+`app/unweave/setup_env.py` detects what is missing and installs it on request, behind
 an explicit consent screen:
 
 - `runtime_ok()`, `ffmpeg_ok()`, `separation_ok()`, `youtube_ok()` probe each stage.
@@ -80,10 +80,16 @@ A scripted alternative for users who cannot run the NSIS installer.
 | FFmpeg | first-run setup | ~100 MB |
 | Model weights | first separation, lazy | ~425 MB |
 
+## Updates
+
+The app does not auto-install. After first-run setup is usable, it may ask permission to
+look up the latest GitHub Release (throttled, no account). About → Check for updates
+always works. Details: [10 — In-app update check](specs/10-updates.md).
+
 ## Technical risks
 
 - The embedded runtime must find the package: `python311._pth` needs the `..` entry, or
-  `import sound_razor` fails at launch. This broke every installed copy once and is only
+  `import unweave` fails at launch. This broke every installed copy once and is only
   caught by running the real installed exe, not a dev venv.
 - pywebview on Windows needs the Edge WebView2 runtime, which may need bundling or
   downloading on older systems.

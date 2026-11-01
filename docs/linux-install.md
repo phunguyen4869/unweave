@@ -143,7 +143,7 @@ with your package manager instead — the app finds it on `PATH`.
   setup) plus `installer/Unweave.nsis` (launcher, menu entry, uninstall). NSIS
   has no Linux equivalent here because there's no prebuilt Python runtime to ship;
   the script builds a venv instead.
-- `app/sound_razor/setup_env.py` picks the FFmpeg archive per platform — the
+- `app/unweave/setup_env.py` picks the FFmpeg archive per platform — the
   gyan.dev `.zip` on Windows, the johnvansickle static `.tar.xz` on Linux — and
   sets the executable bit after extracting the tarball.
 - `installer/Unweave.nsis` reads the app from `app/` and the packaging metadata

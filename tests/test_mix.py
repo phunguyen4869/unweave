@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sound_razor.audio.pipeline import mix_stems
-from sound_razor.tools import ensure_ffmpeg_on_path
+from unweave.audio.pipeline import mix_stems
+from unweave.tools import ensure_ffmpeg_on_path
 
 HAVE_FFMPEG = ensure_ffmpeg_on_path()
 

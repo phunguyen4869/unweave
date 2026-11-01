@@ -19,11 +19,13 @@
   - [06 — Close behavior](specs/06-close-behavior.md)
   - [07 — Disk usage and cache](specs/07-disk-usage.md)
   - [08 — Performance and hidden optimizations](specs/08-performance.md)
+  - [09 — Job progress and ETA](specs/09-job-progress.md)
+  - [10 — In-app update check](specs/10-updates.md)
 
 ## Handoff
 
 - [known-issues-handoff.md](known-issues-handoff.md) — Installer and first-run bugs for a fresh session
 
 Upstream: Unweave is based on [Sound Razor](https://github.com/pedromtcosta/sound-razor) by
-pedromtcosta. The Python package (`sound_razor`) and the model cache (`.sound-razor/`)
+pedromtcosta. The Python package (`unweave`) and the model cache (`.sound-razor/`)
 keep the upstream name on purpose, so existing installs keep working.

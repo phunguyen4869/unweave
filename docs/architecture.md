@@ -1,7 +1,7 @@
 # Architecture — Unweave
 
 Unweave separates a song into stems on the local machine. One Python package does the
-work (`sound_razor/`), a stdlib HTTP server exposes it, and a vanilla-JS frontend drives
+work (`unweave/`), a stdlib HTTP server exposes it, and a vanilla-JS frontend drives
 it. No audio leaves the computer; the only network traffic is model downloads, YouTube
 imports, and MusicBrainz lookups when you ask for them.
 
@@ -11,7 +11,7 @@ imports, and MusicBrainz lookups when you ask for them.
 flowchart TD
     subgraph entry ["1. Entry points"]
         UI["Web UI<br/>Browser at 127.0.0.1:8765<br/><i>joins the job queue and polls /api/state</i>"]
-        CLI["Command line<br/><code>python -m sound_razor separate</code><br/><i>argparse in cli.py, --stems / --group / --split-guitar</i>"]
+        CLI["Command line<br/><code>python -m unweave separate</code><br/><i>argparse in cli.py, --stems / --group / --split-guitar</i>"]
         BOTH["Either path ends in the same function<br/><code>pipeline.separate()</code>"]
         UI --> BOTH
         CLI --> BOTH
@@ -107,11 +107,16 @@ These are the non-obvious decisions; most bugs in this area came from breaking o
   rename fails the backup is restored. A failed or cancelled run never leaves a project
   with half a stem set.
 - **Two progress numbers per job.** `progress` is the overall 0-100 (nav pill, queue bar,
-  library badge); `step_progress` is the current step's own 0-100 and drives the dialog's
-  ring. Steps are `prepare`, `load`, `separate`, `guitar`, `finalize`, derived from
-  markers the CLI prints on stderr.
+  library badge, detail “Whole job” line), mapped from measured inference
+  elapsed/(elapsed+ETA) so it tracks wall-clock; when a guitar pass is still queued, a
+  ~10× prior projects it, then real guitar timing takes over. `step_progress` /
+  `step_eta` drive the detail ring and “Step time left”; dual-pass jobs also expose
+  `pass_index` / `pass_count` and `eta_estimated` so the panel stays step-first.
+  Steps are `prepare`, `load`, `separate`, `guitar`, `finalize`, derived from markers
+  the CLI prints on stderr. Full rules:
+  [09 — Job progress and ETA](specs/09-job-progress.md).
 - **Every job leaves a log.** `<config dir>/logs/<stamp>-<kind>-<id>.log` (override with
-  `SOUND_RAZOR_LOG_DIR`) records the exact command, every raw output line including the
+  `UNWEAVE_LOG_DIR`) records the exact command, every raw output line including the
   progress lines the UI hides, and a closing status. The in-memory log is trimmed and
   dies with the server, so this file is what makes a cancelled or failed run diagnosable.
 - **Leave a core free.** `cpu_threads()` keeps one core for the server and UI, and caps
@@ -146,7 +151,7 @@ These are the non-obvious decisions; most bugs in this area came from breaking o
   `POST /api/library`, `POST /api/import`, `POST /api/cancel`, `POST /api/window/*`
   (desktop title bar). Everything else is a static file from `web/`.
 - `library.py` — job queue and process supervision. Jobs run one at a time per project,
-  up to a RAM/GPU-derived cap; each spawns `python -m sound_razor` as a subprocess, reads
+  up to a RAM/GPU-derived cap; each spawns `python -m unweave` as a subprocess, reads
   its stream line by line, and updates progress. Also owns `JobLog` (the on-disk
   transcript), project listing, import, delete and export jobs, and
   `sweep_stale_staging()` for directories left by interrupted runs.

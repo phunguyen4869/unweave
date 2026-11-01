@@ -5,9 +5,9 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from sound_razor.audio.pipeline import parse_trim
-from sound_razor.cli import parser
-from sound_razor.projects.store import describe_project
+from unweave.audio.pipeline import parse_trim
+from unweave.cli import parser
+from unweave.projects.store import describe_project
 
 
 def project(root: Path, separation: dict, names=("vocals", "guitar", "lead", "rhythm")) -> Path:

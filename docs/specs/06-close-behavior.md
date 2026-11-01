@@ -1,6 +1,6 @@
 # 06 — Close behavior and interrupted jobs
 
-Status: Done (Phase 1)
+Status: Done
 
 What this covers: what happens when the window is closed while a job runs, why the
 result is currently lost, and the planned warning + cleanup. Includes an explicit
@@ -71,7 +71,7 @@ In priority order, as spec'd:
 
 1. **Warn before closing while a job runs** — the close button (`$('win-close')`) calls `/api/window/close`; if a job is running and no `confirm` flag is sent, the backend returns `{"confirm": true, "message": "..."}`. The frontend shows the `close-confirm-dialog` and only re-sends close with `{confirm: true}` after the user confirms. Implemented in `web/js/window.js` and `webui/library.py` `window_action("close")`.
 
-2. **Cancel cleanly on close** — confirmed close calls `library.cancel()` (existing `os.killpg`/`terminate`, then `SIGKILL` after 5 s), cancels all queued jobs, clears the queue, then closes the window. Implemented in `webui/library.py`.
+2. **Cancel cleanly on close** — confirmed close calls `library.cancel()`, cancels all queued jobs, clears the queue, then closes the window. Implemented in `webui/library.py`. Every child is started and stopped through `unweave/processes.py` (`popen()` / `stop()`): on POSIX the whole process group is signalled (`SIGTERM`, then `SIGKILL` after 5 s); on Windows each child runs in a Job Object marked kill-on-close, so cancel ends the CLI *and* anything it started (FFmpeg, yt-dlp's FFmpeg), and the tree also dies if the app itself crashes or is ended from Task Manager. Before this, Windows `terminate()` stopped only the direct child; verified on Windows 11 that the old path left a grandchild running and the new one leaves none, for both cancel and a hard-killed host.
 
 3. **Sweep stale staging directories on startup** — `Library.sweep_stale_staging()` removes `.separation-*`, `.youtube-*`, `.import-*`, `.exports-*`, `.guitar-split-*`, `.stems-*`, `.model-download-*` directories older than 24 h under the projects root. Only known prefixes, never follows symlinks, never outside the projects root. Called at end of `Library.__init__`. Implemented in `webui/library.py`.
 
@@ -79,9 +79,9 @@ In priority order, as spec'd:
 
 ## Remaining work
 
-- [ ] Optional: persist minimal job state (id, project, status, started) so an interrupted job can be reported on next launch ("Your last split was interrupted").
-- [ ] Decide whether queued-but-not-started jobs are cancelled or retained on close (currently cancelled).
-- [ ] Verify no orphaned child process survives a close during an active separation (test on real Windows machine).
+- [ ] Optional, deferred: persist minimal job state (id, project, status, started) so an interrupted job can be reported on next launch ("Your last split was interrupted"). The startup staging sweep already handles the data side; do this only if users ask.
+- [x] Decided: queued-but-not-started jobs are **cancelled** on close. Retaining them would need queue persistence for an edge case; queued jobs cost nothing to re-add.
+- [x] No orphaned child survives a close or cancel on Windows: Job Object kill-on-close in `processes.py` (see item 2).
 
 ## Constraints
 
@@ -91,6 +91,9 @@ In priority order, as spec'd:
   delete anything outside the projects root.
 - Keep the existing `cancel()` semantics; it is the only reliable way to kill the
   child process group.
+- Start every long-lived child with `processes.popen()` and stop it with
+  `processes.stop()`, never bare `subprocess.Popen` / `terminate()`, or Windows loses
+  the tree kill.
 
 ## Related
 

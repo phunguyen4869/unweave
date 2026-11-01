@@ -138,15 +138,15 @@ EOF
     # The layout mirrors the repo exactly, because the code depends on it:
     # pyproject.toml declares `[tool.setuptools.packages.find] where = ["app"]`,
     # and setup_env.py resolves its own install dir as the parent of the
-    # sound_razor package (so it looks for pyproject.toml beside it, and drops
-    # FFmpeg there). Flattening sound_razor/ to the prefix root — the obvious
+    # unweave package (so it looks for pyproject.toml beside it, and drops
+    # FFmpeg there). Flattening unweave/ to the prefix root — the obvious
     # thing to do — breaks both: `uv pip install -e` fails with
     # "error in 'egg_base' option: 'app' does not exist", and first-run setup
     # then can't read the requirements it is supposed to install.
     say "Copying app files…"
     rm -rf "$PREFIX/app"
     mkdir -p "$PREFIX/app"
-    cp -a "$APP_SRC/sound_razor" "$PREFIX/app/sound_razor"
+    cp -a "$APP_SRC/unweave" "$PREFIX/app/unweave"
     cp -a "$APP_SRC/ui_entrypoint.py" "$PREFIX/app/ui_entrypoint.py"
     cp -a "$PYPROJECT" "$PREFIX/app/pyproject.toml"
     cp -a "$PYPROJECT" "$PREFIX/pyproject.toml"

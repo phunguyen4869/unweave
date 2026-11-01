@@ -32,13 +32,13 @@ Stages 1–3 together are roughly 1.5–2.0 GB depending on platform/package ver
 
 Before a download of roughly 1.5 GB begins, the user should see what is required and explicitly approve it. The required runtime, FFmpeg, and separation-engine entries are informational/locked; YouTube support is a genuine optional choice. “Not now” keeps the app available but actions requiring missing components route back to setup. Do not show model downloads as a separate setup prerequisite: they stay attached to the separation or guitar-split action that needs them.
 
-The current checklist and gating are in the running app, but the installer/bootstrap path does not yet provide the complete consent experience: `bootstrap.ps1` currently runs as raw console output before the main app flow. The design intent is to make setup feel like the app's primary first-run experience, with the normal chrome and content transition rather than a visually separate utility screen.
+The checklist, consent and gating are in the running app, and the shipped NSIS installer reaches it without a console step (`bootstrap.ps1` is a legacy developer script, not part of the shipped flow). The design intent is to make setup feel like the app's primary first-run experience, with the normal chrome and content transition rather than a visually separate utility screen.
 
 ## Remaining work
 
-- [ ] Add an explicit approval step before the bootstrap flow downloads the approximately 1.5 GB required stack; make the optional YouTube choice clear.
-- [ ] Replace or reposition the raw-console bootstrap experience so users reach the app UI before stages 1–3 run and receive in-app progress.
-- [ ] Move stage 1–3 installation into the running app's setup job, with per-stage progress and retry/error handling.
+- [x] Approval before the ~1.5 GB download: the shipped installer (`Unweave.nsis`) bundles the embedded Python runtime (stage 1), and stages 2–3 start only from the in-app setup checklist, which lists sizes, keeps YouTube optional and offers "Not now".
+- [x] No raw console on the shipped path: `installer/bootstrap.ps1` is a legacy developer script that the NSIS installer does not run. Users reach the app UI first.
+- [x] Stages 2–4 install inside the running app's setup job (`setup_env.run_setup`) with per-stage progress, cancel, and pip repair/retry.
 - [ ] Complete the visual merge so setup feels like the main UI during first run, rather than a separate setup screen.
 - [ ] End-to-end verify a fresh install in a real Program Files location, including consent, progress, completion, restart, and normal app use.
 - [ ] Rebuild/package and publish a release after the real-install verification.

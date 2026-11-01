@@ -11,7 +11,7 @@ Ordered by measured impact. Each item notes whether it is verified or a hypothes
 
 ## 1. Hardcoded 4 threads in guitar split (verified, highest impact)
 
-[`audio/guitar_split.py:65`](../../app/sound_razor/audio/guitar_split.py) calls
+[`audio/guitar_split.py:65`](../../app/unweave/audio/guitar_split.py) calls
 `torch.set_num_threads(4)` unconditionally, so a 12-core machine uses a third of its
 cores. Measured on this 12-core box (large matmul, proxy for the RoFormer
 compute-bound path):
@@ -33,7 +33,7 @@ all, so it falls back to PyTorch's default (= all cores). That is fine on a dedi
 machine but means a separation job can starve the UI thread.
 
 **Done:** threads set to `max(1, os.cpu_count() - 1)` via `cpu_threads()` in `tools.py`,
-overridable with `SOUND_RAZOR_THREADS` env var. Applied consistently to both the RoFormer
+overridable with `UNWEAVE_THREADS` env var. Applied consistently to both the RoFormer
 path (`guitar_split.py`) and the Demucs/MDX path (`pipeline.py` calls
 `torch.set_num_threads(cpu_threads())` before creating the separator).
 
@@ -116,11 +116,20 @@ noted so it is not mistaken for app bloat.
 
 ## Remaining work
 
-- [ ] Benchmark a real guitar split at 4 vs CPU-derived threads to confirm the matmul
-      proxy translates to wall-clock savings.
-- [ ] Measure the effect on a real Windows install (Defender scanning) if one is
-      available.
-- [ ] Do **not** add a worker-process pool for imports; measured cost is ~1.1 s.
+- [ ] Benchmark a real guitar split at 4, 8 and `cpu_threads()` threads (and physical
+      vs logical core count) to confirm the matmul proxy translates to wall-clock
+      savings. Do it with the GPU work below.
+- [x] Closed: Defender measurement. Item 2 removed most of the churn it would have
+      amplified; reopen only if someone reports slow writes.
+- [x] Decided: **no** worker-process pool for imports; measured cost is ~1.1 s.
+- [x] The UI server no longer imports torch to detect CUDA (it kept hundreds of MB
+      resident in a process that never runs inference); see [05](05-job-queue.md).
+- [ ] When more than one job runs (CUDA builds only), divide `cpu_threads()` by the
+      number of active jobs so parallel jobs do not oversubscribe the CPU.
+- [ ] GPU path, now [11 — GPU acceleration](11-gpu-acceleration.md): the guitar split is hard-coded to CPU
+      (`map_location='cpu'`, no device move), and the Windows PyPI torch is a CPU
+      build. Optional CUDA setup step + device selection in `guitar_split.py` +
+      VRAM-aware concurrency. Biggest remaining speed-up.
 
 ## Constraints
 
