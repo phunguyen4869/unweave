@@ -72,6 +72,17 @@
   .sub-note a { color: var(--muted); text-decoration: underline; }
   .credit { margin-top: 10px; font-size: 0.85rem; color: var(--muted); }
   .credit a.author { color: var(--accent); font-weight: 600; text-decoration: underline; }
+  .intro-video {
+    display: block;
+    width: 100%;
+    max-width: 880px;
+    aspect-ratio: 16 / 9;
+    margin: 40px auto 0;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: #0b0c0f;
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,0.8), 0 0 60px -20px rgba(255,138,61,0.35);
+  }
 
   section { padding: 64px 0; border-bottom: 1px solid var(--border); }
   section:last-of-type { border-bottom: none; }
@@ -171,6 +182,9 @@
     </a>
     <div class="sub-note" data-i18n="hero.subnote">Free &amp; open source · Windows 10/11 (64-bit) · <a href="https://github.com/um1chc5/unweave">View on GitHub</a></div>
     <div class="credit" data-i18n="hero.credit">By <a href="https://github.com/um1chc5" class="author">um1chc5</a> · based on <a href="https://github.com/pedromtcosta/sound-razor">Sound Razor</a> by <a href="https://github.com/pedromtcosta" class="author">pedromtcosta</a></div>
+    <video class="intro-video" autoplay muted loop playsinline preload="metadata" poster="assets/unweave-intro-poster.jpg">
+      <source src="assets/unweave-intro.mp4" type="video/mp4" />
+    </video>
   </div>
 </header>
 

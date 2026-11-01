@@ -1,0 +1,16 @@
+{
+  "name": "unweave-promo",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts Intro out/unweave-intro.mp4",
+    "render:vertical": "remotion render src/index.ts IntroVertical out/unweave-intro-vertical.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.539",
+    "@remotion/google-fonts": "^4.0.539",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.539"
+  }
+}
