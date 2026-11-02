@@ -18,6 +18,8 @@ const STRINGS = {
   'banner.setupNeeded': {en: 'Unweave needs to download components before separation works — ', vi: 'Unweave cần tải thêm thành phần trước khi tách nhạc hoạt động — '},
   'banner.openSetup': {en: 'open setup', vi: 'mở thiết lập'},
   'banner.toContinue': {en: ' to continue.', vi: ' để tiếp tục.'},
+  'banner.linuxAudio': {en: 'Playback may be silent in the Linux window — ', vi: 'Phát nhạc có thể bị mất tiếng trong cửa sổ Linux — '},
+  'banner.openInBrowser': {en: 'Open in browser', vi: 'Mở trong trình duyệt'},
 
   'new.title': {en: 'Separate a song', vi: 'Tách một bài hát'},
   'new.sub': {en: 'Pick a track, choose the stems you want, and Unweave splits it on this computer. Nothing is uploaded anywhere.', vi: 'Chọn một bản nhạc, chọn các track bạn muốn, và Unweave sẽ tách nó ngay trên máy tính này. Không có gì được tải lên đâu cả.'},

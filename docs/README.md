@@ -5,8 +5,9 @@
 - [overview.md](overview.md) — What Unweave is, project structure, the two layers
 - [architecture.md](architecture.md) — Data flow diagram, design rules, module responsibilities, models
 - [tech-stack.md](tech-stack.md) — Technologies used and alternatives considered
-- [desktop-app.md](desktop-app.md) — Packaging: NSIS installer, embedded runtime, pywebview, Linux install
+- [desktop-app.md](desktop-app.md) — Packaging: NSIS installer, embedded runtime, pywebview, Linux/macOS scripts
 - [linux-install.md](linux-install.md) — Linux install guide, launcher, uninstall, troubleshooting
+- [macos-install.md](macos-install.md) — macOS install guide (unsigned), Gatekeeper, paths
 
 ## Specs
 

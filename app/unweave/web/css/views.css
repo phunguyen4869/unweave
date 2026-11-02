@@ -568,10 +568,18 @@ dialog.settings-dialog {
 .settings-about-head .dialog-sub { margin: 0; }
 
 dialog.startup-dialog {
+  /* No fixed `height` — only max-height — so content sizes the dialog. */
   width: min(560px, 92vw);
   max-height: min(640px, 88vh);
   padding: 0;
-  overflow: hidden;
+  overflow: auto;
+}
+/* settings-shell uses height:100% for the tall Settings dialog. That percentage
+   collapses to ~0 on WebKitGTK when the parent only has max-height (no definite
+   height), which made the startup consent dialog a thin empty strip on Linux. */
+dialog.startup-dialog .settings-shell {
+  height: auto;
+  max-height: none;
 }
 .startup-body {
   display: flex;

@@ -14,6 +14,7 @@ import {animate} from './audio/audio.js';
 import {t} from './core/i18n.js';
 import {initLangToggle} from './chrome/lang-toggle.js';
 import {considerUpdates} from './chrome/updates.js';
+import {initLinuxAudioBanner, renderLinuxAudioBanner} from './chrome/linux-audio.js';
 
 // Late-bind the hooks only after every module has evaluated, then initialize the
 // remaining page chrome before the initial state poll starts.
@@ -21,9 +22,10 @@ initNavigation();
 initTitlebar();
 initThemeToggle();
 initLangToggle();
+initLinuxAudioBanner();
 
 async function poll() {
-  try { await nav.refresh(); }
+  try { await nav.refresh(); renderLinuxAudioBanner(); }
   catch (error) { notice(t('nav.connectionProblem', {error: error.message}), 'error'); }
   try { await considerUpdates(); } catch (_) { /* update consent/check is best-effort */ }
   setTimeout(poll, queueBusy() ? 1000 : 2500);

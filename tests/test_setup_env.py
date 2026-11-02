@@ -49,6 +49,10 @@ class SetupHealthTests(unittest.TestCase):
             self.assertTrue(setup_env.ffmpeg_url().endswith(".tar.xz"))
         with patch.object(setup_env.sys, "platform", "win32"):
             self.assertTrue(setup_env.ffmpeg_url().endswith(".zip"))
+        with patch.object(setup_env.sys, "platform", "darwin"):
+            self.assertTrue(setup_env.ffmpeg_url().endswith("/zip"))
+            jobs = setup_env._ffmpeg_download_jobs()
+            self.assertEqual([label for label, _ in jobs], ["ffmpeg", "ffprobe"])
 
     def test_host_arch_ok_rejects_arm_linux(self):
         with patch.object(setup_env.sys, "platform", "linux"), \
@@ -236,7 +240,9 @@ class SetupHealthTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             install = Path(temporary) / "ffmpeg"
             with patch.object(setup_env, "urlopen", return_value=FakeResponse()), \
-                 patch.object(setup_env, "ffmpeg_url", return_value="http://example/ffmpeg.zip"), \
+                 patch.object(setup_env, "_ffmpeg_download_jobs",
+                              return_value=[("ffmpeg", "http://example/ffmpeg.zip")]), \
+                 patch.object(setup_env.sys, "platform", "win32"), \
                  patch.object(setup_env, "_host_arch_ok", return_value=True), \
                  patch.object(setup_env, "_cancelling", return_value=False), \
                  patch.object(setup_env, "ffmpeg_dir", return_value=install), \

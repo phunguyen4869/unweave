@@ -34,24 +34,45 @@ def app_version() -> str:
 
 
 def _local_app_data() -> Path:
+    """Windows per-user Local AppData (also used when migrating a mis-pathed Unix install)."""
     return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
 
 
 def app_data_dir() -> Path:
     """Per-user folder for config, models and setup downloads (ui_entrypoint.py uses it too)."""
-    return _local_app_data() / APP_NAME
+    if sys.platform == "win32":
+        return _local_app_data() / APP_NAME
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / APP_NAME
+    xdg = os.environ.get("XDG_DATA_HOME")
+    base = Path(xdg) if xdg else Path.home() / ".local" / "share"
+    return base / "unweave"
 
 
 def migrate_legacy_data_dir() -> None:
     """Carry a pre-rename install's data over (setup's ~1.6 GB of packages, models,
     settings) by renaming the folder, so nothing is downloaded again. The installer
-    does the same before removing the old version; this covers anything it missed."""
-    legacy, current = _local_app_data() / LEGACY_APP_NAME, app_data_dir()
-    if legacy.is_dir() and not current.exists():
-        try:
-            legacy.rename(current)
-        except OSError:
-            pass  # in use by an old copy still running; the next launch retries
+    does the same before removing the old version; this covers anything it missed.
+
+    On Linux/macOS also moves a mistaken ~/AppData/Local/Unweave (from when
+    app_data_dir always used the Windows layout) into the platform-correct path."""
+    current = app_data_dir()
+    candidates = []
+    if sys.platform == "win32":
+        candidates.append(_local_app_data() / LEGACY_APP_NAME)
+    else:
+        candidates.append(_local_app_data() / APP_NAME)
+        candidates.append(_local_app_data() / LEGACY_APP_NAME)
+    for legacy in candidates:
+        if legacy.resolve() == current.resolve():
+            continue
+        if legacy.is_dir() and not current.exists():
+            try:
+                current.parent.mkdir(parents=True, exist_ok=True)
+                legacy.rename(current)
+            except OSError:
+                pass  # in use by an old copy still running; the next launch retries
+            return
 
 
 def packages_prefix() -> Path:

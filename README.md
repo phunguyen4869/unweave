@@ -66,11 +66,26 @@ It needs Python 3.11+, `uv` (or `venv`), and GTK 3 + WebKit2 for the native wind
 installer writes a launcher and a menu entry, and the app downloads FFmpeg and the
 separation engine on first launch, just like the Windows build. See
 [docs/linux-install.md](docs/linux-install.md) for the full guide, uninstall steps
-and troubleshooting.
+and troubleshooting. If playback is silent in the native window, use
+`UNWEAVE_BROWSER=1 unweave` (or the in-app banner).
+
+## macOS
+
+```bash
+git clone https://github.com/um1chc5/unweave.git
+cd unweave
+./installer/install-macos.sh
+unweave
+```
+
+Needs Python 3.11+ and `uv` (or `venv`). No GTK packages — the window uses Cocoa
+WKWebView via pywebview. The script also writes an **unsigned**
+`~/Applications/Unweave.app` (right-click → Open the first time). No signing or
+notarization. See [docs/macos-install.md](docs/macos-install.md).
 
 ## System Requirements
 
-- **OS**: Windows 10/11 (64-bit)
+- **OS**: Windows 10/11 (64-bit); also Linux and macOS via the install scripts above
 - **RAM**: 8GB minimum, 16GB recommended
 - **Storage**: about 2 GB for the app's components and AI models, plus room for your songs (see below)
 - **CPU**: Modern 64-bit processor (4+ cores recommended)

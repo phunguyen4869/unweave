@@ -27,11 +27,10 @@ BIN_DIR="$HOME/.local/bin"
 DESKTOP_DIR="$HOME/.local/share/applications"
 ICON_DIR="$HOME/.local/share/icons"
 
-# Per-user data the app itself creates at runtime. Kept on uninstall: the model
-# cache alone is ~455 MB of downloaded weights, and the projects folder is the
-# user's own separated songs.
+# Per-user data the app itself creates at runtime (matches app_data_dir() on Linux).
+# Kept on uninstall: the model cache alone is ~455 MB of downloaded weights, and
+# the projects folder is the user's own separated songs.
 CONFIG_DIR="$HOME/.local/share/unweave"
-CACHE_DIR="$HOME/.cache/unweave"
 PROJECTS_DIR="$HOME/Music/Unweave"
 
 PREFIX="$DEFAULT_PREFIX"
@@ -101,7 +100,7 @@ uninstall() {
         echo
         echo "Kept (delete these yourself if you want a clean slate, or use --purge):"
         echo "  $CONFIG_DIR/ui.json   (settings)"
-        echo "  $CACHE_DIR/models     (AI models, ~455 MB)"
+        echo "  $CONFIG_DIR/models    (AI models, ~455 MB)"
         echo "  $PROJECTS_DIR         (your separated songs)"
     fi
 }
@@ -114,9 +113,16 @@ purge() {
     echo
     say "Purging model cache and settings…"
     local removed=0
-    if [ -e "$CACHE_DIR/models" ]; then
-        rm -rf "$CACHE_DIR/models"
-        echo "Removed $CACHE_DIR/models"
+    if [ -e "$CONFIG_DIR/models" ]; then
+        rm -rf "$CONFIG_DIR/models"
+        echo "Removed $CONFIG_DIR/models"
+        removed=1
+    fi
+    # Older installs may have used ~/.cache/unweave/models before app_data_dir was fixed.
+    if [ -e "$HOME/.cache/unweave/models" ]; then
+        rm -rf "$HOME/.cache/unweave/models"
+        echo "Removed $HOME/.cache/unweave/models"
+        rmdir "$HOME/.cache/unweave" 2>/dev/null || true
         removed=1
     fi
     if [ -e "$CONFIG_DIR/ui.json" ]; then
@@ -124,8 +130,6 @@ purge() {
         echo "Removed $CONFIG_DIR/ui.json"
         removed=1
     fi
-    # Drop empty cache/config parents left behind, but never $PROJECTS_DIR.
-    rmdir "$CACHE_DIR" 2>/dev/null || true
     if [ "$PREFIX" != "$CONFIG_DIR" ]; then
         rmdir "$CONFIG_DIR" 2>/dev/null || true
     fi

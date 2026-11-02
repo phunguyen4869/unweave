@@ -218,7 +218,9 @@ class DownloadCapTests(unittest.TestCase):
                                   process=None, job={"status": "running", "progress": 0})
         with tempfile.TemporaryDirectory() as temporary:
             with mock.patch.object(setup_env, "urlopen", return_value=Endless()), \
-                 mock.patch.object(setup_env, "ffmpeg_url", return_value="http://example/ffmpeg.zip"), \
+                 mock.patch.object(setup_env, "_ffmpeg_download_jobs",
+                                   return_value=[("ffmpeg", "http://example/ffmpeg.zip")]), \
+                 mock.patch.object(setup_env.sys, "platform", "win32"), \
                  mock.patch.object(setup_env, "_host_arch_ok", return_value=True), \
                  mock.patch.object(setup_env, "_cancelling", return_value=False), \
                  mock.patch.object(setup_env, "_tick"), \

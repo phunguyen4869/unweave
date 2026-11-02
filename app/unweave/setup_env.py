@@ -42,12 +42,13 @@ _SIZE_UNITS = {
 
 # Mirrors installer/bootstrap.ps1: ffmpeg/ffprobe land next to the app folder
 # (install root), where tools.py already looks for them. The Windows build is a
-# .zip of .exe files; Linux gets the johnvansickle static build (a .tar.xz) so the
-# app can bootstrap FFmpeg on its own there too instead of demanding a system
-# package — a distro-agnostic download beats "apt install ffmpeg, but only on
-# Debian" for an app that ships as a portable folder.
+# .zip of .exe files; Linux gets the johnvansickle static build (a .tar.xz); macOS
+# gets evermeet.cx release zips (Intel binaries — also run under Rosetta on Apple
+# Silicon). Prefer a system/Homebrew ffmpeg on PATH when present (ffmpeg_ok).
 FFMPEG_URL_WINDOWS = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 FFMPEG_URL_LINUX = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+FFMPEG_URL_DARWIN_FFMPEG = "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip"
+FFMPEG_URL_DARWIN_FFPROBE = "https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip"
 FFMPEG_SIZE_MB = 100
 SEPARATION_SIZE_MB = 1600
 YOUTUBE_SIZE_MB = 15
@@ -55,19 +56,30 @@ RUNTIME_SIZE_MB = 50
 
 
 def ffmpeg_url() -> str:
-    """Which FFmpeg archive to download for this platform."""
+    """Primary FFmpeg archive URL for this platform (for logs / single-archive hosts)."""
     if sys.platform.startswith("linux"):
         return FFMPEG_URL_LINUX
+    if sys.platform == "darwin":
+        return FFMPEG_URL_DARWIN_FFMPEG
     return FFMPEG_URL_WINDOWS
 
 
+def _ffmpeg_download_jobs() -> list[tuple[str, str]]:
+    """(label, url) archives to fetch. Darwin ships ffmpeg and ffprobe as separate zips."""
+    if sys.platform == "darwin":
+        return [("ffmpeg", FFMPEG_URL_DARWIN_FFMPEG), ("ffprobe", FFMPEG_URL_DARWIN_FFPROBE)]
+    if sys.platform.startswith("linux"):
+        return [("ffmpeg", FFMPEG_URL_LINUX)]
+    return [("ffmpeg", FFMPEG_URL_WINDOWS)]
+
+
 def _host_arch_ok() -> bool:
-    """The Linux static build is x86-64 only; arm64 has no equivalent download, so
-    setup must say so instead of fetching a binary that cannot exec."""
-    if not sys.platform.startswith("linux"):
-        return True
-    machine = platform.machine().lower()
-    return machine in {"x86_64", "amd64"}
+    """The Linux static build is x86-64 only; arm64 Linux has no equivalent download.
+    macOS uses evermeet Intel zips (Rosetta on Apple Silicon)."""
+    if sys.platform.startswith("linux"):
+        machine = platform.machine().lower()
+        return machine in {"x86_64", "amd64"}
+    return True
 
 
 STAGE_ORDER = ("ffmpeg", "separation", "youtube")
@@ -298,6 +310,21 @@ def _extract_ffmpeg_zip(archive: Path, install: Path) -> None:
             shutil.copyfileobj(source, target)
 
 
+def _extract_darwin_binary_zip(archive: Path, install: Path, binary: str) -> None:
+    """evermeet.cx zips ship a single Mach-O named ffmpeg or ffprobe at the root."""
+    with zipfile.ZipFile(archive) as zip_file:
+        names = [n for n in zip_file.namelist() if not n.endswith("/")]
+        match = next((n for n in names if Path(n).name == binary), None)
+        if match is None:
+            match = next((n for n in names if Path(n).name.startswith(binary)), None)
+        if match is None:
+            raise RuntimeError(f"FFmpeg archive is missing {binary}.")
+        target = install / binary
+        with zip_file.open(match) as source, target.open("wb") as stream:
+            shutil.copyfileobj(source, stream)
+        target.chmod(target.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+
 def _extract_ffmpeg_tar(archive: Path, install: Path) -> None:
     """Linux: the static build keeps ffmpeg/ffprobe at the archive root and the
     binaries need the executable bit set explicitly — a plain extract() drops it,
@@ -322,76 +349,98 @@ def _extract_ffmpeg_tar(archive: Path, install: Path) -> None:
         raise RuntimeError(f"FFmpeg archive is missing {missing}.")
 
 
+def _download_archive(library, url: str, archive: Path, start_progress: int, band: int,
+                      *, progress_offset: float = 0.0, progress_span: float = 1.0) -> None:
+    """Fetch one archive into `archive`, reporting progress into the setup job."""
+    # Cap runaway downloads (a misbehaving proxy once filled a disk with 16 GB
+    # "ffmpeg.zip" files). Abort past Content-Length, or 500 MB when unknown.
+    try:
+        with urlopen(url, timeout=60) as response, archive.open("wb") as stream:
+            length = response.headers.get("Content-Length")
+            expected = int(length) if length is not None else None
+            max_bytes = expected if expected is not None else 500 * 1024 * 1024
+            received = 0
+            started = time.monotonic()
+            last_report = 0.0
+            while True:
+                if _cancelling(library):
+                    raise RuntimeError("Setup cancelled.")
+                block = response.read(1024 * 1024)
+                if not block:
+                    break
+                stream.write(block)
+                received += len(block)
+                if received > max_bytes:
+                    raise RuntimeError("FFmpeg download was larger than expected")
+                now = time.monotonic()
+                elapsed = now - started
+                # Throttle UI ticks; average speed from the whole transfer so far
+                # so the number stays stable instead of bouncing on every chunk.
+                if elapsed >= 0.25 and (now - last_report) >= 0.25:
+                    last_report = now
+                    speed = received / elapsed
+                    eta = ((expected - received) / speed) if expected and speed > 0 else None
+                    if expected:
+                        fraction = progress_offset + progress_span * (received / expected)
+                        pct = start_progress + int(fraction * band)
+                        _tick(library, "download", "ffmpeg",
+                              start_progress + min(band, pct - start_progress),
+                              received=received, total=expected, speed=speed,
+                              step_eta=eta)
+                    else:
+                        _tick(library, "download", "ffmpeg", start_progress,
+                              received=received, speed=speed)
+                elif expected is None and received % (32 * 1024 * 1024) == 0:
+                    _log(library, f"Downloaded {received // (1024 * 1024)} MiB…")
+            if expected is not None and received != expected:
+                raise RuntimeError("Incomplete FFmpeg download. Retry setup.")
+            if received:
+                elapsed = max(time.monotonic() - started, 1e-6)
+                fraction = progress_offset + progress_span
+                _tick(library, "download", "ffmpeg",
+                      start_progress + int(fraction * band),
+                      received=received, total=expected or received,
+                      speed=received / elapsed, step_eta=0)
+    except Exception:
+        try:
+            archive.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
 def _install_ffmpeg(library, start_progress: int, band: int) -> int:
     """Download FFmpeg and place ffmpeg + ffprobe next to the app folder. Returns
     the progress reached."""
     if not _host_arch_ok():
         raise RuntimeError("Automatic FFmpeg setup is only available for x86-64 on Linux. "
                            "Install FFmpeg with your package manager and reopen the app.")
+    jobs = _ffmpeg_download_jobs()
     _tick(library, "download", "ffmpeg", start_progress, clear_download=True)
-    _log(library, f"Downloading FFmpeg from {ffmpeg_url()}…")
+    _log(library, f"Downloading FFmpeg from {jobs[0][1]}…")
     with tempfile.TemporaryDirectory(prefix="unweave-ffmpeg-") as temporary:
         work = Path(temporary)
-        archive = work / "ffmpeg.tar.xz" if sys.platform.startswith("linux") else work / "ffmpeg.zip"
-        # Cap runaway downloads (a misbehaving proxy once filled a disk with 16 GB
-        # "ffmpeg.zip" files). Abort past Content-Length, or 500 MB when unknown.
-        max_bytes = None
-        try:
-            with urlopen(ffmpeg_url(), timeout=60) as response, archive.open("wb") as stream:
-                length = response.headers.get("Content-Length")
-                expected = int(length) if length is not None else None
-                max_bytes = expected if expected is not None else 500 * 1024 * 1024
-                received = 0
-                started = time.monotonic()
-                last_report = 0.0
-                while True:
-                    if _cancelling(library):
-                        raise RuntimeError("Setup cancelled.")
-                    block = response.read(1024 * 1024)
-                    if not block:
-                        break
-                    stream.write(block)
-                    received += len(block)
-                    if received > max_bytes:
-                        raise RuntimeError("FFmpeg download was larger than expected")
-                    now = time.monotonic()
-                    elapsed = now - started
-                    # Throttle UI ticks; average speed from the whole transfer so far
-                    # so the number stays stable instead of bouncing on every chunk.
-                    if elapsed >= 0.25 and (now - last_report) >= 0.25:
-                        last_report = now
-                        speed = received / elapsed
-                        eta = ((expected - received) / speed) if expected and speed > 0 else None
-                        if expected:
-                            pct = start_progress + int((received / expected) * band)
-                            _tick(library, "download", "ffmpeg",
-                                  start_progress + min(band, pct - start_progress),
-                                  received=received, total=expected, speed=speed,
-                                  step_eta=eta)
-                        else:
-                            _tick(library, "download", "ffmpeg", start_progress,
-                                  received=received, speed=speed)
-                    elif expected is None and received % (32 * 1024 * 1024) == 0:
-                        _log(library, f"Downloaded {received // (1024 * 1024)} MiB…")
-                if expected is not None and received != expected:
-                    raise RuntimeError("Incomplete FFmpeg download. Retry setup.")
-                if received:
-                    elapsed = max(time.monotonic() - started, 1e-6)
-                    _tick(library, "download", "ffmpeg", start_progress + band,
-                          received=received, total=expected or received,
-                          speed=received / elapsed, step_eta=0)
-        except Exception:
-            try:
-                archive.unlink(missing_ok=True)
-            except OSError:
-                pass
-            raise
         install = ffmpeg_dir()
         install.mkdir(parents=True, exist_ok=True)
+        span = 1.0 / len(jobs)
+        archives: list[tuple[str, Path]] = []
+        for index, (label, url) in enumerate(jobs):
+            if len(jobs) > 1:
+                _log(library, f"Downloading {label}…")
+            if sys.platform.startswith("linux"):
+                archive = work / "ffmpeg.tar.xz"
+            else:
+                archive = work / f"{label}.zip"
+            _download_archive(library, url, archive, start_progress, band,
+                              progress_offset=index * span, progress_span=span)
+            archives.append((label, archive))
         if sys.platform.startswith("linux"):
-            _extract_ffmpeg_tar(archive, install)
+            _extract_ffmpeg_tar(archives[0][1], install)
+        elif sys.platform == "darwin":
+            for label, archive in archives:
+                _extract_darwin_binary_zip(archive, install, label)
         else:
-            _extract_ffmpeg_zip(archive, install)
+            _extract_ffmpeg_zip(archives[0][1], install)
     if not ensure_ffmpeg_on_path():
         raise RuntimeError("FFmpeg was installed but could not be added to PATH.")
     _log(library, "FFmpeg installed.")

@@ -8,6 +8,7 @@ import {renderSetup, renderSetupView, renderSetupBanner} from '../views/setup.js
 import {refreshSettingsOpen} from '../views/settings.js';
 import {t, onLangChange} from '../core/i18n.js';
 import {jobWhat, openQueue, renderQueue} from '../features/queue.js';
+import {renderLinuxAudioBanner} from './linux-audio.js';
 function clearSongTrim() {
   store.songTrimEditor?.destroy();
   store.songTrimEditor = null;
@@ -51,6 +52,7 @@ export function render() {
   // (and so never running this gate at all) — so first-run setup never actually appeared.
   if (store.state.setup?.required && !store.setupDeclined && store.view !== 'setup') { show('setup'); return; }
   renderChrome(); renderNew(); renderLibrary(); renderSong(); renderSetup(); renderSetupView(); renderSetupBanner();
+  renderLinuxAudioBanner();
   // Settings is a dialog: only refresh component install chips while it is open.
   refreshSettingsOpen();
 }

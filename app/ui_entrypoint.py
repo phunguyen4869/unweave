@@ -46,6 +46,11 @@ def known_folder(guid: str, fallback: Path) -> Path:
             ctypes.windll.ole32.CoTaskMemFree(path_ptr)
 
 
+def prefer_browser() -> bool:
+    """UNWEAVE_BROWSER=1|true|yes skips the native window (Linux WebKit audio workaround)."""
+    return os.environ.get("UNWEAVE_BROWSER", "").strip().lower() in {"1", "true", "yes"}
+
+
 def writable_dirs():
     """Where this app keeps its own data when it may be installed somewhere read-only
     (Program Files needs admin rights to write to — a plain double-click shortcut never
@@ -54,19 +59,22 @@ def writable_dirs():
 
     Background data (config, the multi-hundred-MB model cache) goes under the standard
     per-user app-data folder; the default separated-song output folder goes somewhere
-    the user would actually look for it — the *real*, possibly OneDrive-redirected,
-    Documents folder, not a guessed %USERPROFILE%\\Documents that may silently diverge
-    from what Explorer actually shows the user as "Documents".
+    the user would actually look for it — Documents\\Unweave on Windows (the *real*,
+    possibly OneDrive-redirected Documents folder), and ~/Music/Unweave on Linux/macOS.
     """
     from unweave.tools import APP_NAME, app_data_dir as app_data, migrate_legacy_data_dir
     migrate_legacy_data_dir()
     app_data_dir = app_data()
-    documents = known_folder("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}",  # FOLDERID_Documents
-                              Path(os.environ.get("USERPROFILE") or Path.home()) / "Documents")
+    if os.name == "nt":
+        documents = known_folder("{FDD39AD0-238F-46AF-ADB4-6C85480369C7}",  # FOLDERID_Documents
+                                  Path(os.environ.get("USERPROFILE") or Path.home()) / "Documents")
+        default_root = documents / APP_NAME
+    else:
+        default_root = Path.home() / "Music" / APP_NAME
     return {
         "config": app_data_dir / "ui.json",
         "cache": app_data_dir / "models",
-        "default_root": documents / APP_NAME,
+        "default_root": default_root,
     }
 
 # Which corner/edge stays put while the opposite one follows the mouse, keyed by the
@@ -145,16 +153,38 @@ class WindowControls:
         fix = FIX_POINTS.get(direction, FixPoint.NORTH | FixPoint.WEST)
         self._window.resize(max(MIN_WIDTH, width), max(MIN_HEIGHT, height), fix)
 
+    def open_external(self, url: str) -> None:
+        """Open a URL in the real system browser (WebKitGTK blocks window.open)."""
+        if not isinstance(url, str) or not url.startswith(("http://", "https://")):
+            raise ValueError("open-external needs an http(s) URL.")
+        # webbrowser.open uses xdg-open on Linux; keeps the native window alive.
+        if not webbrowser.open(url):
+            raise ValueError("Could not open the system browser.")
+
 
 def app_icon() -> str | None:
     """The app's own icon for the window and its taskbar button. Without one, pywebview's
     Windows backend takes python.exe's icon, since python.exe owns the window. The
-    installer puts icon.ico next to this file; a checkout has it in ../assets."""
+    installer puts icon.ico next to this file; a checkout has it in ../assets.
+
+    Linux GTK/WebKit rejects PNG-compressed .ico files ("Compressed icons are not
+    supported"), so skip the icon there rather than crashing window creation."""
+    if sys.platform.startswith("linux"):
+        return None
     here = Path(__file__).resolve().parent
     for path in (here / "icon.ico", here.parent / "assets" / "icon.ico"):
         if path.is_file():
             return str(path)
     return None
+
+
+def _run_in_browser(url: str) -> None:
+    webbrowser.open(url)
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        pass
 
 
 def main():
@@ -163,12 +193,13 @@ def main():
 
     # Use the CLI to start the UI server
     from unweave.webui import serve
-    from pathlib import Path
 
+    force_browser = prefer_browser()
     # Created before the window exists and handed straight to serve(): it's only ever
     # *used* once a request reaches it, which can't happen until the window (created
     # further down) is visible and attach() below has already run.
-    controls = WindowControls() if webview is not None else None
+    use_native = webview is not None and not force_browser
+    controls = WindowControls() if use_native else None
 
     dirs = writable_dirs()
 
@@ -183,7 +214,7 @@ def main():
 
     url = f"http://{host}:{port}"
 
-    if webview is not None:
+    if use_native:
         # ?native=1 tells the page (synchronously, no race) to show its own title bar
         # immediately; its buttons call back through controls above via the HTTP API.
         window = webview.create_window(
@@ -206,12 +237,9 @@ def main():
         webview.settings["REMOTE_DEBUGGING_PORT"] = 9223
         webview.start(debug=False, icon=app_icon())
     else:
-        webbrowser.open(url)
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            pass
+        if force_browser and webview is not None:
+            print("UNWEAVE_BROWSER set — opening in the system browser.", flush=True)
+        _run_in_browser(url)
 
 
 if __name__ == "__main__":

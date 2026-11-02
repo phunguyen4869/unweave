@@ -57,7 +57,8 @@ existing web UI and Python server unchanged.
 
 The Linux counterpart to `bootstrap.ps1` + `Unweave.nsis`. There is no portable embedded
 interpreter for Linux, so the script builds a venv with `uv`, installs the app, and writes
-a launcher plus a `.desktop` entry.
+a launcher plus a `.desktop` entry. `UNWEAVE_BROWSER=1` opens the UI in a system browser
+(workaround for silent WebKitGTK Web Audio).
 
 ```sh
 ./install-linux.sh                 # install to ~/.local/share/unweave
@@ -67,7 +68,19 @@ a launcher plus a `.desktop` entry.
 ./install-linux.sh --uninstall     # remove the app, keep models and songs
 ```
 
-### 5. Windows bootstrap (`installer/bootstrap.ps1`)
+### 5. macOS (`installer/install-macos.sh`)
+
+Same shape as the Linux script: venv + launcher under
+`~/Library/Application Support/Unweave`, plus an **unsigned** `~/Applications/Unweave.app`.
+No Developer ID signing or notarization. See [macos-install.md](macos-install.md).
+
+```sh
+./install-macos.sh                 # default Application Support prefix
+./install-macos.sh --full          # also install PyTorch/audio-separator now
+./install-macos.sh --uninstall     # remove app + launcher; keep models and songs
+```
+
+### 6. Windows bootstrap (`installer/bootstrap.ps1`)
 
 A scripted alternative for users who cannot run the NSIS installer.
 

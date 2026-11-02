@@ -63,22 +63,26 @@ sudo pacman -S python-gobject gtk3 webkit2gtk-4.1
 > `gir1.2-webkit2-4.0` instead of `-4.1`; pywebview supports both.
 
 If these packages are missing the app still runs — it just falls back to opening
-in your default browser. To force that deliberately:
+in your default browser. To force that deliberately (also the workaround for
+silent WebKitGTK playback):
 
 ```bash
 UNWEAVE_BROWSER=1 unweave
 ```
 
+`UNWEAVE_BROWSER` is honored by `ui_entrypoint.py`. In the native window on Linux
+the app also shows a dismissible banner with an **Open in browser** link.
+
 ## Where things go
 
 | Path | Contents |
 |---|---|
-| `~/.local/share/unweave` | The app itself and its `.venv` |
+| `~/.local/share/unweave` | The app itself, its `.venv`, settings, models, FFmpeg |
 | `~/.local/bin/unweave` | Launcher script |
 | `~/.local/share/applications/unweave.desktop` | Menu entry |
 | `~/.local/share/icons/unweave.png` | Icon |
 | `~/.local/share/unweave/ui.json` | Your last-used projects folder |
-| `~/.cache/unweave/models` | Downloaded AI models (~455 MB) |
+| `~/.local/share/unweave/models` | Downloaded AI models (~455 MB) |
 | `~/Music/Unweave` | Your separated songs (the default projects folder) |
 
 FFmpeg, once downloaded by the first-run setup, lands next to the app in
@@ -95,8 +99,7 @@ your models, settings and separated songs — delete these by hand for a clean
 slate:
 
 ```bash
-rm -rf ~/.local/share/unweave ~/.cache/unweave \
-       ~/Music/"Unweave"
+rm -rf ~/.local/share/unweave ~/Music/"Unweave"
 ```
 
 ## Troubleshooting
@@ -111,15 +114,16 @@ it with:
   "import gi; gi.require_version('WebKit2','4.1'); from gi.repository import WebKit2; print('ok')"
 ```
 
-If that fails, install the packages and re-run the installer.
+If that fails, install the packages and re-run the installer. If you set
+`UNWEAVE_BROWSER=1`, browser mode is intentional.
 
 **Playback clips for a moment, then goes silent in the native window (known issue).**
 Seen on Ubuntu 24.04 (WebKitGTK 2.4x, PipeWire). The native window plays audio through
 WebKitGTK's Web Audio, which decodes with GStreamer. Its FLAC decoder logs
 `flacdec: Lost sync, flushing decoder` on the 24-bit FLAC stems, and even with the stems
 converted to WAV the output was a ~0.3 s burst followed by silence. The audio device
-itself is fine, and Chrome plays the same project correctly. Not fixed yet; until then,
-use the browser mode:
+itself is fine, and Chrome plays the same project correctly. Not fixed in-engine; use
+browser mode (or the in-app **Open in browser** banner):
 
 ```bash
 UNWEAVE_BROWSER=1 unweave
@@ -144,8 +148,8 @@ with your package manager instead — the app finds it on `PATH`.
   has no Linux equivalent here because there's no prebuilt Python runtime to ship;
   the script builds a venv instead.
 - `app/unweave/setup_env.py` picks the FFmpeg archive per platform — the
-  gyan.dev `.zip` on Windows, the johnvansickle static `.tar.xz` on Linux — and
-  sets the executable bit after extracting the tarball.
+  gyan.dev `.zip` on Windows, the johnvansickle static `.tar.xz` on Linux,
+  evermeet.cx zips on macOS — and sets the executable bit after extracting.
 - `installer/Unweave.nsis` reads the app from `app/` and the packaging metadata
   from the repo root's `pyproject.toml`; `install-linux.sh` mirrors that layout so
   both installers stay in sync with one source tree.

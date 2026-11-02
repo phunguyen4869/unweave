@@ -4,6 +4,7 @@ from collections import deque
 import json
 from pathlib import Path
 import subprocess
+import sys
 import threading
 import time
 
@@ -172,7 +173,13 @@ class Library(JobQueueMixin, SettingsMixin):
                        "job": job_shim,
                        "finished_jobs": [public_job(job) for job in self.finished_jobs],
                        "cleanup": cleanup,
-                       "version": APP_VERSION, "now": time.time()}
+                       "version": APP_VERSION, "now": time.time(),
+                       "platform": (
+                           "windows" if sys.platform == "win32"
+                           else "darwin" if sys.platform == "darwin"
+                           else "linux" if sys.platform.startswith("linux")
+                           else sys.platform
+                       )}
         payload["projects"] = list_projects(root) if root else []
         payload["setup"] = self.setup_status()
         return payload
@@ -225,6 +232,18 @@ class Library(JobQueueMixin, SettingsMixin):
             self.window.move_to(data.get("x"), data.get("y"))
         elif action == "resize":
             self.window.resize_to(data.get("width"), data.get("height"), data.get("direction", ""))
+        elif action == "open-external":
+            # Works even when window controls exist: used for Linux “Open in browser”.
+            url = (data or {}).get("url")
+            opener = getattr(self.window, "open_external", None)
+            if callable(opener):
+                opener(url)
+            else:
+                import webbrowser
+                if not isinstance(url, str) or not url.startswith(("http://", "https://")):
+                    raise ValueError("open-external needs an http(s) URL.")
+                if not webbrowser.open(url):
+                    raise ValueError("Could not open the system browser.")
         else:
             raise ValueError("Unknown window action.")
         return {"ok": True}
