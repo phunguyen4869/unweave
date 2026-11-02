@@ -28,6 +28,7 @@ async function poll() {
   try { await nav.refresh(); renderLinuxAudioBanner(); }
   catch (error) { notice(t('nav.connectionProblem', {error: error.message}), 'error'); }
   try { await considerUpdates(); } catch (_) { /* update consent/check is best-effort */ }
-  setTimeout(poll, queueBusy() ? 1000 : 2500);
+  // YouTube clips often finish in under a second; 1s polling only ever showed 0% then trim.
+  setTimeout(poll, queueBusy() ? 250 : 2500);
 }
 poll(); animate();

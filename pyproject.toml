@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "unweave"
-version = "1.5.3"
+version = "1.5.4"
 description = "Standalone desktop app for Sound Razor - AI audio stem separation with enhanced UI"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -43,7 +43,9 @@ guitars = [
     "audioread>=3.0",
 ]
 youtube = [
-    "yt-dlp>=2024.1.1",
+    # YouTube breaks old extractors often; keep a recent floor so first-run
+    # install / repair does not leave a 2024-era yt-dlp that exits 1.
+    "yt-dlp>=2025.10.14",
 ]
 full = [
     "unweave[separation,guitars,youtube]",

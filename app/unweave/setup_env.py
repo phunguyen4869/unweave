@@ -179,8 +179,20 @@ def separation_ok() -> bool:
     return importlib.util.find_spec("audio_separator") is not None and torch_ok()
 
 
+# Floor matching pyproject youtube extra. Older builds hit YouTube HTTP 400
+# ("Precondition check failed") and surface as "download failed (exit 1)".
+_YTDLP_MIN = (2025, 10, 14)
+
+
 def youtube_ok() -> bool:
-    return importlib.util.find_spec("yt_dlp") is not None
+    if importlib.util.find_spec("yt_dlp") is None:
+        return False
+    try:
+        import yt_dlp
+        parts = tuple(int(p) for p in str(yt_dlp.version.__version__).split(".")[:3])
+    except Exception:
+        return True
+    return len(parts) == 3 and parts >= _YTDLP_MIN
 
 
 def probe_separation() -> str:

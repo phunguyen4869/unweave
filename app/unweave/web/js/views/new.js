@@ -107,7 +107,10 @@ function renderNewChip() {
 }
 function renderNewTrim() {
   const host = $('new-trim');
-  const available = !!trimSource();
+  // Hide trim during the post-download handoff so the 100% panel is the only surface.
+  const ytHandoff = !!(store.pending?.jobId && store.pending.trimFirst
+    && findJob(store.pending.jobId)?.status === 'succeeded');
+  const available = !!trimSource() && !ytHandoff;
   host.hidden = !available;
   if (!available) return;
   const hint = $('new-trim-hint');
@@ -147,7 +150,12 @@ export function renderNew() {
   // The YouTube import this page started (or any one still in the queue).
   const pendingId = store.pending?.jobId || store.pending?.failed;
   const youtube = (pendingId && findJob(pendingId)) || (store.state.jobs || []).find(j => j.kind === 'youtube') || null;
-  const showYt = !!youtube && (jobPending(youtube) || store.pending?.jobId === youtube.id || youtube.status === 'failed' && store.pending?.failed === youtube.id);
+  // Keep the 100% ring up after success until openYoutubeTrim has the Section editor ready
+  // (fetch + decode). Clearing pending earlier left a blank gap before trim appeared.
+  const ytHandoff = !!(store.pending?.jobId && store.pending.trimFirst
+    && youtube && youtube.id === store.pending.jobId && youtube.status === 'succeeded');
+  const showYt = !!youtube && (jobPending(youtube) || store.pending?.jobId === youtube.id
+    || youtube.status === 'failed' && store.pending?.failed === youtube.id);
   $('yt-panel').hidden = !showYt;
   if (showYt) renderProgress($('yt-panel'), youtube);
   // YouTube support is optional in first-run setup, so offer it here when it was skipped.
@@ -158,8 +166,8 @@ export function renderNew() {
   $('yt-install').textContent = ytSetup ? t('youtube.installing', {pct: Math.floor(ytSetup.progress || 0)}) : t('youtube.install');
   const ytReady = store.ytReady;
   $('yt-link').hidden = !!ytReady;
-  $('yt-ready').hidden = !ytReady;
-  if (ytReady) {
+  $('yt-ready').hidden = !ytReady || ytHandoff;
+  if (ytReady && !ytHandoff) {
     $('yt-ready-name').textContent = ytReady.title;
     $('yt-ready-meta').textContent = t('youtube.readyMeta', {duration: store.newTrimDuration ? formatClock(store.newTrimDuration, 0) : '…'});
   }
@@ -241,15 +249,32 @@ export async function continuePending() {
   const job = store.pending?.jobId && findJob(store.pending.jobId);
   if (!job) return;
   if (job.status === 'succeeded' && job.project && store.pending.trimFirst) {
-    store.pending = null;
+    // refresh() calls this on every poll; only one handoff at a time.
+    if (store.ytHandoff) return;
+    store.ytHandoff = true;
+    // Leave pending set so renderNew keeps the 100% ring until trim is ready.
     $('youtube-url').value = '';
-    await openYoutubeTrim(job.project);
+    try {
+      await openYoutubeTrim(job.project);
+    } finally {
+      store.ytHandoff = false;
+      store.pending = null;
+      renderNew();
+    }
   } else if (job.status === 'succeeded' && job.project) {
+    if (store.ytHandoff) return;
+    store.ytHandoff = true;
     const request = pendingRequest(store.pending);
     store.pending = null;
     $('youtube-url').value = '';
-    try { await api(`${projectUrl(job.project)}/separate`, {root: store.state.root, ...request}); await nav.refresh(); nav.selectProject(job.project); }
-    catch (error) { notice(error.message, 'error'); await nav.refresh(); nav.selectProject(job.project); }
+    try {
+      await api(`${projectUrl(job.project)}/separate`, {root: store.state.root, ...request});
+      await nav.refresh(); nav.selectProject(job.project);
+    } catch (error) {
+      notice(error.message, 'error'); await nav.refresh(); nav.selectProject(job.project);
+    } finally {
+      store.ytHandoff = false;
+    }
   } else if (['failed', 'cancelled'].includes(job.status)) {
     store.pending = {failed: job.id};
   }
@@ -269,7 +294,8 @@ async function openYoutubeTrim(projectId) {
     notice(error.message, 'error');
     return;
   }
-  if (store.sourceMode === 'youtube') prepareNewTrim(store.ytReady.blob);
+  // Await decode so the handoff does not clear pending (and the 100% UI) too early.
+  if (store.sourceMode === 'youtube') await prepareNewTrim(store.ytReady.blob);
   else renderNew();
   if (store.view !== 'new') notice(t('youtube.readyNotice', {title}), 'success');
 }

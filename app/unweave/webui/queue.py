@@ -436,7 +436,8 @@ class JobQueueMixin:
                     chosen = {key: fields[key] or str(defaults[key])[:500] for key in defaults}
                     result = import_project(root, work/'source.wav', 'original.wav', chosen,
                                             origin={'provider': 'YouTube', 'url': url})
-                    job.update(status='succeeded', project=result['id'])
+                    job.update(status='succeeded', project=result['id'],
+                               progress=100, step_progress=100, phase='done', eta=0)
         except Exception as error:
             with self.lock:
                 if job['status'] != 'cancelling':

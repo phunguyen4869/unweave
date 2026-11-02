@@ -32,7 +32,9 @@ def youtube_url(url: str) -> str:
 def youtube_command(url: str, directory: Path) -> list[str]:
     return [
         sys.executable, "-m", "yt_dlp", "--ignore-config", "--no-playlist",
-        "--newline", "--progress", "--progress-delta", "1", "--write-info-json",
+        # progress-delta 0 prints every tick so the UI ring can move on short downloads;
+        # delta 1 only emitted 0% then 100% for ~5 MB clips that finish under a second.
+        "--newline", "--progress", "--progress-delta", "0", "--write-info-json",
         "--format", "bestaudio/best", "--extract-audio",
         "--audio-format", "wav", "--output", str(directory / "source.%(ext)s"),
         "--", youtube_url(url),
