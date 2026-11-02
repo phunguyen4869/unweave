@@ -1,6 +1,7 @@
 """Job queue, workers, cancel, and per-job transcripts."""
 
 from collections import deque
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -13,7 +14,7 @@ import threading
 import time
 import uuid
 
-from ..projects import describe_project, import_project, project_path, stem_file
+from ..projects import describe_project, import_project, metadata_fields, project_path, stem_file
 from ..audio.sources import youtube_url, youtube_command
 from ..audio.pipeline import probe_duration, parse_trim
 from ..audio.exports import FORMATS, export_stems
@@ -313,7 +314,7 @@ class JobQueueMixin:
                "_split_leaves": bool(split_leaves), "_trim": saved_trim, "_disk_need": disk_need}
         return self._enqueue(job)
 
-    def _seconds(project, info, guitar_split, trim) -> float:
+    def _seconds(self, project, info, guitar_split, trim) -> float:
         if trim:
             return trim[1] - trim[0]
         source = project / 'stems' / stem_file(project / 'stems', 'guitar') if guitar_split else project / info["original"]

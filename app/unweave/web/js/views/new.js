@@ -167,9 +167,13 @@ export function renderNew() {
     : !!ytReady || !ytMissing && /^https?:\/\/\S+/.test($('youtube-url').value.trim());
   // With "trim first" on, this click only downloads; separation waits for the trim.
   const downloadOnly = store.sourceMode === 'youtube' && !ytReady && $('yt-trim-first').checked;
-  // A running job no longer blocks this page: the new one waits in the queue.
-  $('start').disabled = !ready || !store.state.root || store.busy || !pickerValid($('new-stems'));
-  $('start').textContent = store.busy ? t('start.starting') : downloadOnly ? t('start.download')
+  // Keep the CTA locked for the whole YouTube download, not just the enqueue request.
+  const ytDownloading = store.sourceMode === 'youtube' && !!youtube && jobPending(youtube);
+  // A running separation no longer blocks this page: the new one waits in the queue.
+  $('start').disabled = !ready || !store.state.root || store.busy || ytDownloading || !pickerValid($('new-stems'));
+  $('start').textContent = ytDownloading ? t('start.downloading')
+    : store.busy ? t('start.starting')
+    : downloadOnly ? t('start.download')
     : queueBusy() ? t('start.addToQueue') : t('start.button');
   // Queued jobs hold paths inside the current folder, so it stays put until they finish.
   $('folder-open').disabled = store.busy || queueBusy();
@@ -204,6 +208,8 @@ $('yt-install').onclick = async () => {
 };
 $('start').onclick = async () => {
   if (store.busy) return;
+  const pendingYt = (store.state.jobs || []).find(j => j.kind === 'youtube' && jobPending(j));
+  if (store.sourceMode === 'youtube' && pendingYt) return;
   if (store.state.setup?.required) { notice(t('setup.completeFirst'), 'error'); return; }
   store.newTrimEditor?.stopPreview();
   const choice = pickerValue($('new-stems'));

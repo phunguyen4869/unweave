@@ -42,6 +42,7 @@ const STRINGS = {
   'youtube.readyDismiss': {en: 'Not now (the song stays in your Library)', vi: 'Để sau (bài hát vẫn nằm trong Thư viện)'},
   'youtube.readyNotice': {en: '“{title}” is downloaded. Trim it and start separating on the Separate page.', vi: 'Đã tải “{title}”. Cắt đoạn và bắt đầu tách ở trang Tách nhạc.'},
   'start.download': {en: 'Download song', vi: 'Tải bài hát'},
+  'start.downloading': {en: 'Downloading…', vi: 'Đang tải…'},
   'details.songDetails': {en: 'Song details', vi: 'Thông tin bài hát'},
   'details.optional': {en: 'optional', vi: 'tùy chọn'},
   'field.title': {en: 'Title', vi: 'Tên bài hát'},
