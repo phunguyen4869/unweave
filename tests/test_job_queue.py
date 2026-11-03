@@ -311,6 +311,46 @@ class JobLogTests(unittest.TestCase):
         self.assertEqual(len(list(self.base.glob("*.log"))), 2)
 
 
+class FinishedJobLogsTests(unittest.TestCase):
+    """Failed/finished jobs must keep their log lines in /api/state (spec 15 / blank-log bug)."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        base = Path(self.temporary.name)
+        self.root = base / "projects"
+        self.root.mkdir()
+        self.library = Library(self.root, base / "ui.json", base / "cache",
+                               default_root=self.root)
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def test_finished_jobs_include_logs(self):
+        from unweave.webui.queue import cli_failure_message
+
+        job = {
+            "id": "fail-1", "kind": "separation", "project": "song",
+            "status": "failed", "error": "boom", "started": 1.0, "finished": 2.0,
+        }
+        self.library.finished_jobs.append(job)
+        self.library._job_logs("fail-1").extend([
+            "Preparing audio",
+            "Loading model htdemucs_6s.yaml",
+            cli_failure_message("Separation CLI", 3221225477),
+        ])
+        finished = self.library.state()["finished_jobs"]
+        match = next(item for item in finished if item["id"] == "fail-1")
+        self.assertEqual(match["logs"][0], "Preparing audio")
+        self.assertIn("access violation", match["logs"][-1].lower())
+        self.assertIn("htdemucs_6s.yaml", match["logs"][1])
+
+    def test_access_violation_message(self):
+        from unweave.webui.queue import cli_failure_message
+        text = cli_failure_message("Separation CLI", 3221225477)
+        self.assertIn("access violation", text.lower())
+        self.assertIn("Repair", text)
+
+
 
 class ThreadShareTests(unittest.TestCase):
     """Parallel jobs split the inference cores instead of each taking them all."""

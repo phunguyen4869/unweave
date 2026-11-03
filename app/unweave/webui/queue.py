@@ -32,6 +32,17 @@ APP_VERSION = app_version()
 EXPORT_SIZE_FACTOR = {"flac": 1.0, "wav16": 2.0, "aiff": 2.0, "mp3": 0.3, "opus": 0.2, "m4a": 0.25}
 # How many per-job log files to keep on disk.
 JOB_LOG_KEEP = 40
+# Windows STATUS_ACCESS_VIOLATION (0xC0000005) as unsigned wait status / signed int.
+_WIN_ACCESS_VIOLATION = {0xC0000005, 3221225477, -1073741819}
+
+
+def cli_failure_message(kind: str, code: int) -> str:
+    """Human-readable subprocess failure; notes native Windows crashes when applicable."""
+    if code in _WIN_ACCESS_VIOLATION:
+        return (f"{kind} crashed (Windows access violation, code {code}). "
+                "Often a damaged separation engine or model cache — "
+                "try Settings → Components → Repair, then Storage → Clear models.")
+    return f"{kind} exited with code {code}. See the process log."
 
 class JobLog:
     """A per-job transcript on disk, so a run can be diagnosed after the fact.
@@ -426,7 +437,9 @@ class JobQueueMixin:
                     if job['status'] == 'cancelling':
                         return
                     if code:
-                        raise ValueError(f'YouTube download failed (exit {code}). See the download log.')
+                        message = cli_failure_message('YouTube download', code)
+                        self._job_logs(job_id).append(message)
+                        raise ValueError(message)
                     # yt-dlp writes UTF-8; Windows' default cp1252 chokes on non-ASCII titles.
                     info = json.loads((work/'source.info.json').read_text(encoding='utf-8'))
                     defaults = {'title': info.get('track') or info.get('title') or 'YouTube recording',
@@ -478,7 +491,9 @@ class JobQueueMixin:
                     if job["status"] == "cancelling":
                         return
                 if code != 0:
-                    raise RuntimeError(f"Separation CLI exited with code {code}. See the process log.")
+                    message = cli_failure_message("Separation CLI", code)
+                    job_logs.append(message)
+                    raise RuntimeError(message)
                 self._expect_outputs(stage, stems, group)
                 # Publish only a successful run; preserve the old stems on failure.
                 with self.lock:

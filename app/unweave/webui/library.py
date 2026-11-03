@@ -173,7 +173,10 @@ class Library(JobQueueMixin, SettingsMixin):
                        "active_jobs": [jid for jid in self.active],
                        "max_concurrent_jobs": self.max_concurrent_jobs,
                        "job": job_shim,
-                       "finished_jobs": [public_job(job) for job in self.finished_jobs],
+                       "finished_jobs": [
+                           {**public_job(job), "logs": list(self._job_logs(job["id"]))}
+                           for job in self.finished_jobs
+                       ],
                        "cleanup": cleanup,
                        "version": APP_VERSION, "now": time.time(),
                        "platform": (
