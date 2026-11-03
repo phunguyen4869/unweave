@@ -2,6 +2,7 @@ import {$, el, api, notice, jobRunning} from '../core/core.js';
 import {store, nav} from '../core/store.js';
 import {t} from '../core/i18n.js';
 import {STAGE_ICONS, sizeText, speedText} from '../features/components.js';
+import {copyDiagnostics, openFacebook, openGitHubIssues} from '../features/diagnostics.js';
 /* ---------- first-run setup ---------- */
 // How much of the overall 0-100 progress each running stage gets, in the same order
 // backend setup.py allocated bands (STAGE_ORDER, filtered to what was actually
@@ -97,10 +98,11 @@ export function renderSetup() {
   overall.hidden = !running;
   overall.classList.toggle('is-busy', running);
   $('setup-overall-bar').style.width = `${running ? Math.floor(job.progress) : 0}%`;
+  const failed = job && job.kind === 'setup' && job.status === 'failed';
   const logPanel = $('setup-log');
   const logBody = $('setup-log-body');
-  const logs = running ? (job.logs || []) : [];
-  if (running && logs.length) {
+  const logs = (running || failed) ? (job.logs || []) : [];
+  if ((running || failed) && logs.length) {
     logPanel.hidden = false;
     const text = logs.join('\n');
     const nearBottom = logBody.scrollHeight - logBody.scrollTop - logBody.clientHeight < 40;
@@ -108,10 +110,13 @@ export function renderSetup() {
       logBody.textContent = text;
       if (nearBottom) logBody.scrollTop = logBody.scrollHeight;
     }
-  } else if (!running) {
+  } else if (!running && !failed) {
     logPanel.hidden = true;
     logBody.textContent = '';
   }
+  const report = $('setup-report');
+  report.hidden = !failed;
+  $('setup-error').textContent = failed ? (job.error || t('setup.failed')) : '';
   const requiredMissing = setup.stages.some(s => s.required && s.missing);
   $('setup-start').disabled = !requiredMissing || running;
   $('setup-start').hidden = running;
@@ -139,9 +144,20 @@ $('setup-start').onclick = async () => {
   const stages = store.state.setup.stages.filter(s => s.missing && (s.required || s.id === 'youtube' && store.setupYoutube)).map(s => s.id);
   store.setupRunningStages = stages;  // same order/filter the backend uses for its progress bands
   $('setup-error').textContent = '';
+  $('setup-report').hidden = true;
   try {
     await api('/api/setup/start', {stages});
     await nav.refresh();
   } catch (error) { store.setupRunningStages = []; $('setup-error').textContent = error.message; }
 };
 $('setup-cancel').onclick = () => api('/api/cancel', {}).then(nav.refresh).catch(e => notice(e.message, 'error'));
+$('setup-copy-report').onclick = async () => {
+  try { await copyDiagnostics(store.state.job?.kind === 'setup' ? store.state.job.id : undefined); }
+  catch (error) { notice(error.message, 'error'); }
+};
+$('setup-github-issues').onclick = () => {
+  openGitHubIssues().catch(error => notice(error.message, 'error'));
+};
+$('setup-facebook').onclick = () => {
+  openFacebook().catch(error => notice(error.message, 'error'));
+};

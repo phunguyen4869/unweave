@@ -90,6 +90,8 @@
           <a class="credit" href="https://github.com/pedromtcosta/sound-razor" target="_blank" rel="noopener noreferrer" data-i18n-tooltip="credit.builtOnTitle" data-i18n="credit.builtOn">Based on <strong>Sound Razor</strong> by pedromtcosta</a>
           <span class="credit-sep" aria-hidden="true">·</span>
           <a class="credit" href="https://github.com/um1chc5" target="_blank" rel="noopener noreferrer" data-i18n-tooltip="credit.desktopBuildTitle" data-i18n="credit.desktopBuild">Desktop build by <strong>um1chc5</strong></a>
+          <span class="credit-sep" aria-hidden="true">·</span>
+          <a class="credit" href="https://www.facebook.com/um1chc5/" target="_blank" rel="noopener noreferrer" data-i18n="credit.facebook">Facebook</a>
         </p>
       </div>
 
@@ -201,6 +203,11 @@
           <summary data-i18n="setup.processLog">Install log</summary>
           <pre id="setup-log-body" class="log-output"></pre>
         </details>
+        <div id="setup-report" class="pv-report setup-report" hidden>
+          <button id="setup-copy-report" type="button" class="btn btn-ghost btn-sm" data-i18n="diagnostics.copyReport">Copy error report</button>
+          <button id="setup-github-issues" type="button" class="btn btn-ghost btn-sm" data-i18n="diagnostics.openGithub">Open GitHub Issues</button>
+          <button id="setup-facebook" type="button" class="btn btn-ghost btn-sm" data-i18n="diagnostics.openFacebook">Facebook</button>
+        </div>
       </section>
       <p id="setup-error" class="form-error" role="alert"></p>
     </section>
@@ -537,8 +544,15 @@
               <p class="about-links">
                 <a id="about-author" href="https://github.com/um1chc5" target="_blank" rel="noopener noreferrer" data-i18n="about.authorLink">um1chc5 on GitHub</a>
                 <span aria-hidden="true">·</span>
+                <a id="about-facebook" href="https://www.facebook.com/um1chc5/" target="_blank" rel="noopener noreferrer" data-i18n="about.facebookLink">Facebook</a>
+                <span aria-hidden="true">·</span>
                 <a id="about-repo" href="https://github.com/um1chc5/unweave" target="_blank" rel="noopener noreferrer" data-i18n="about.repoLink">Unweave repository</a>
               </p>
+              <div class="about-diagnostics">
+                <button id="about-copy-diagnostics" type="button" class="btn btn-ghost btn-sm" data-i18n="diagnostics.copyDiagnostics">Copy diagnostics</button>
+                <button id="about-open-issues" type="button" class="btn btn-ghost btn-sm" data-i18n="diagnostics.openGithub">Open GitHub Issues</button>
+                <button id="about-open-facebook" type="button" class="btn btn-ghost btn-sm" data-i18n="diagnostics.openFacebook">Facebook</button>
+              </div>
             </div>
             <div id="about-credits" class="about-credits"></div>
             <p class="hint"><a id="about-full" target="_blank" rel="noopener noreferrer" data-i18n="about.fullList">Full credits and licenses</a> · © 2026 um1chc5 · MIT</p>

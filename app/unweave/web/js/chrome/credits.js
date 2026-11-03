@@ -1,6 +1,7 @@
-import {$, el} from '../core/core.js';
+import {$, el, notice} from '../core/core.js';
 import {store} from '../core/store.js';
 import {t, onLangChange} from '../core/i18n.js';
+import {copyDiagnostics, openFacebook, openGitHubIssues} from '../features/diagnostics.js';
 /* ---------- About tab credits (the full list with licenses is in README.md) ---------- */
 export const CREDITS = [
   ['about.basedOn', [
@@ -30,6 +31,34 @@ function link(href, text, className = '') {
   return a;
 }
 
+function bindAboutActions() {
+  const copy = $('about-copy-diagnostics');
+  const github = $('about-open-issues');
+  const facebook = $('about-open-facebook');
+  if (copy && !copy.dataset.bound) {
+    copy.dataset.bound = '1';
+    copy.onclick = async () => {
+      try { await copyDiagnostics(); }
+      catch (error) { notice(error.message, 'error'); }
+    };
+  }
+  if (github && !github.dataset.bound) {
+    github.dataset.bound = '1';
+    github.onclick = () => {
+      openGitHubIssues().catch(error => notice(error.message, 'error'));
+    };
+  }
+  if (facebook && !facebook.dataset.bound) {
+    facebook.dataset.bound = '1';
+    facebook.onclick = () => {
+      openFacebook().catch(error => notice(error.message, 'error'));
+    };
+  }
+  if (copy) copy.textContent = t('diagnostics.copyDiagnostics');
+  if (github) github.textContent = t('diagnostics.openGithub');
+  if (facebook) facebook.textContent = t('diagnostics.openFacebook');
+}
+
 export function renderAbout() {
   const version = $('about-version');
   const list = $('about-credits');
@@ -49,6 +78,7 @@ export function renderAbout() {
   }
   list.append(items);
   full.href = README_CREDITS;
+  bindAboutActions();
 }
 
 onLangChange(() => {

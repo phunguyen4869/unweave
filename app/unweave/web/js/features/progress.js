@@ -3,6 +3,7 @@ import {$, el, api, notice, serverNow, duration} from '../core/core.js';
 import {store, nav} from '../core/store.js';
 import {t, onLangChange} from '../core/i18n.js';
 import {byteText, speedText} from './components.js';
+import {copyDiagnostics, openFacebook, openGitHubIssues} from './diagnostics.js';
 /* ---------- progress view ---------- */
 export function buildProgress(panel) {
   panel.innerHTML = `
@@ -30,6 +31,11 @@ export function buildProgress(panel) {
         <p class="pv-job-note" hidden></p>
       </div>
       <details class="log-details"><summary class="pv-log-summary"></summary><pre class="log-output pv-log"></pre></details>
+      <div class="pv-report" hidden>
+        <button type="button" class="btn btn-ghost btn-sm pv-copy-report"></button>
+        <button type="button" class="btn btn-ghost btn-sm pv-github-issues"></button>
+        <button type="button" class="btn btn-ghost btn-sm pv-facebook"></button>
+      </div>
     </div>
     <ol class="pv-steps"></ol>`;
   panel.querySelector('.pv-cancel').onclick = async event => {
@@ -37,6 +43,16 @@ export function buildProgress(panel) {
     event.currentTarget.disabled = true;
     // Cancel this panel's job only; other running or queued jobs keep going.
     try { await api('/api/cancel', panel.dataset.jobId ? {job_id: panel.dataset.jobId} : {}); await nav.refresh(); } catch (error) { notice(error.message, 'error'); }
+  };
+  panel.querySelector('.pv-copy-report').onclick = async () => {
+    try { await copyDiagnostics(panel.dataset.jobId || undefined); }
+    catch (error) { notice(error.message, 'error'); }
+  };
+  panel.querySelector('.pv-github-issues').onclick = () => {
+    openGitHubIssues().catch(error => notice(error.message, 'error'));
+  };
+  panel.querySelector('.pv-facebook').onclick = () => {
+    openFacebook().catch(error => notice(error.message, 'error'));
   };
   applyProgressChrome(panel);
 }
@@ -47,6 +63,9 @@ function applyProgressChrome(panel) {
   panel.querySelector('.pv-eyebrow-stems').textContent = t('progress.stemsLabel');
   panel.querySelector('.pv-log-summary').textContent = t('progress.processLog');
   panel.querySelector('.pv-job-label').textContent = t('progress.wholeJob');
+  panel.querySelector('.pv-copy-report').textContent = t('diagnostics.copyReport');
+  panel.querySelector('.pv-github-issues').textContent = t('diagnostics.openGithub');
+  panel.querySelector('.pv-facebook').textContent = t('diagnostics.openFacebook');
 }
 buildProgress($('job-panel'));
 buildProgress($('yt-panel'));
@@ -144,6 +163,8 @@ export function renderProgress(panel, job) {
     list.append(item);
   });
   panel.querySelector('.pv-log').textContent = (job.logs || []).join('\n');
+  const report = panel.querySelector('.pv-report');
+  report.hidden = job.status !== 'failed';
   renderTimers(panel, job);
 }
 function renderQueued(panel, job) {
@@ -165,6 +186,7 @@ function renderQueued(panel, job) {
   panel.querySelector('.pv-steps').replaceChildren();
   panel.querySelector('.pv-eta').closest('.pv-stats').hidden = true;
   panel.querySelector('.pv-log').textContent = '';
+  panel.querySelector('.pv-report').hidden = true;
 }
 export function renderTimers(panel, job) {
   if (job.status === 'queued') return;

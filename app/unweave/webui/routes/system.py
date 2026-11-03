@@ -12,6 +12,13 @@ def register(router, library):
     def state(req, query, **_):
         return library.state()
 
+    @router.get("/api/diagnostics")
+    def diagnostics(req, query, **_):
+        job_id = query.get("job_id") or None
+        if job_id is not None and not isinstance(job_id, str):
+            raise ValueError("job_id must be a string.")
+        return library.diagnostics(job_id=job_id)
+
     @router.get("/api/startup")
     def startup(req, query, **_):
         return library.startup_sections()

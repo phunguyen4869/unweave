@@ -566,6 +566,18 @@ dialog.settings-dialog {
 .settings-leftover-auto { margin: 0; }
 .settings-about-head h3 { margin: 0; font-family: var(--font-display); font-size: 22px; }
 .settings-about-head .dialog-sub { margin: 0; }
+.about-diagnostics,
+.pv-report,
+.setup-report {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px;
+}
+.diagnostics-fallback { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; min-width: min(560px, 92vw); }
+.diagnostics-text {
+  width: 100%; box-sizing: border-box; resize: vertical; min-height: 220px;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg-raised); color: var(--text);
+}
 
 dialog.startup-dialog {
   /* No fixed `height` — only max-height — so content sizes the dialog. */

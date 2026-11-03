@@ -8,6 +8,8 @@ import sys
 import threading
 import time
 
+from ..diagnostics import (build_diagnostics_text, host_arch, host_platform_name,
+                           host_python)
 from ..projects import atomic_json, list_projects
 from ..projects.metadata import MetadataLookup
 from ..tools import env_first
@@ -183,6 +185,60 @@ class Library(JobQueueMixin, SettingsMixin):
         payload["projects"] = list_projects(root) if root else []
         payload["setup"] = self.setup_status()
         return payload
+
+    def _diagnostics_job(self, job_id: str | None = None) -> tuple[dict | None, list[str]]:
+        """Pick a job + its in-memory log lines for the diagnostics bundle."""
+        if job_id:
+            job = self.active_jobs.get(job_id)
+            if job is None:
+                for queued in self.queue:
+                    if queued.get("id") == job_id:
+                        job = queued
+                        break
+            if job is None:
+                for finished in reversed(self.finished_jobs):
+                    if finished.get("id") == job_id:
+                        job = finished
+                        break
+            if job is None and self.job and self.job.get("id") == job_id:
+                job = self.job
+            if job is not None:
+                return job, list(self._job_logs(job["id"]))
+            return None, []
+
+        # Prefer the newest failed finished job, then any active job, then the shim.
+        for finished in reversed(self.finished_jobs):
+            if finished.get("status") == "failed":
+                return finished, list(self._job_logs(finished["id"]))
+        for job_id in self.active:
+            job = self.active_jobs.get(job_id)
+            if job is not None:
+                return job, list(self._job_logs(job_id))
+        if self.job is not None:
+            return self.job, list(self._job_logs(self.job["id"]))
+        if self.finished_jobs:
+            job = self.finished_jobs[-1]
+            return job, list(self._job_logs(job["id"]))
+        return None, []
+
+    def diagnostics(self, job_id: str | None = None) -> dict:
+        """Plain-text diagnostics for clipboard paste (spec 15). No network upload."""
+        with self.lock:
+            job, log_lines = self._diagnostics_job(job_id)
+            root = self.root
+            public = public_job(job) if job else None
+        setup = self.setup_status()
+        text = build_diagnostics_text(
+            version=APP_VERSION,
+            platform_name=host_platform_name(),
+            arch=host_arch(),
+            python_version=host_python(),
+            setup_stages=setup.get("stages"),
+            job=public,
+            log_lines=log_lines,
+            projects_root=root,
+        )
+        return {"text": text}
 
     def pick_folder(self) -> dict:
         """Choose the projects folder with the OS picker and switch to it.
