@@ -68,6 +68,7 @@ def build_diagnostics_text(
     platform_name: str,
     arch: str,
     python_version: str,
+    vcruntime: str | None = None,
     utc_now: datetime | None = None,
     setup_stages: list[dict] | None = None,
     job: dict | None = None,
@@ -107,6 +108,7 @@ def build_diagnostics_text(
         f"Platform: {platform_name}\n"
         f"Arch: {arch}\n"
         f"Python: {python_version}\n"
+        f"VC++ runtime: {vcruntime or '—'}\n"
         f"App clock (UTC): {stamp}\n"
         f"Setup: {setup}\n"
         f"Last job: {last_job}\n"

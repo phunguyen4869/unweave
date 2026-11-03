@@ -3,12 +3,13 @@ const svg = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 
 export const STAGE_ICONS = {
   runtime: svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18M6.5 6.5h.01M9.5 6.5h.01"/>'),
+  vcruntime: svg('<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>'),
   ffmpeg: svg('<path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/>'),
   separation: svg('<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>'),
   youtube: svg('<rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="m10 9.2 4.8 2.8-4.8 2.8V9.2Z"/>'),
 };
 
-export const INSTALLABLE_STAGES = new Set(['ffmpeg', 'separation', 'youtube']);
+export const INSTALLABLE_STAGES = new Set(['vcruntime', 'ffmpeg', 'separation', 'youtube']);
 
 export function sizeText(mb) {
   return mb >= 1000 ? `${(mb / 1000).toFixed(1)} GB` : `${mb} MB`;

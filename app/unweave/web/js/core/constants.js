@@ -29,7 +29,7 @@ export const EXPORT_FORMATS = [
   ['aiff', 'format.aiff.title', 'format.aiff.sub'],
 ];
 export const SETUP_STEPS = [['prepare', 'step.setup.prepare'], ['download', 'step.setup.download'], ['install', 'step.setup.install'], ['finalize', 'step.setup.finalize']];
-export const SETUP_STAGE_LABEL = {ffmpeg: 'setup.stageShort.ffmpeg', separation: 'setup.stageShort.separation', youtube: 'setup.stageShort.youtube', runtime: 'setup.stageShort.runtime'};
+export const SETUP_STAGE_LABEL = {vcruntime: 'setup.stageShort.vcruntime', ffmpeg: 'setup.stageShort.ffmpeg', separation: 'setup.stageShort.separation', youtube: 'setup.stageShort.youtube', runtime: 'setup.stageShort.runtime'};
 export const SETUP_PHASE_TITLE = {prepare: 'setup.phase.prepare.title', finalize: 'setup.phase.finalize.title'};
 export const SETUP_PHASE_SUB = {prepare: 'setup.phase.prepare.sub', download: 'setup.phase.download.sub', install: 'setup.phase.install.sub', finalize: 'setup.phase.finalize.sub'};
 export const ORIGINAL_FILE = '__original__';

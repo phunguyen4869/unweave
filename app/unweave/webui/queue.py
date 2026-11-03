@@ -21,8 +21,9 @@ from ..audio.exports import FORMATS, export_stems
 from ..tools import (MISSING_FFMPEG, PCM_BYTES_PER_SECOND, app_version, cpu_threads, ensure_ffmpeg_on_path,
                      env_first, require_free_space, total_ram_gb)
 from ..processes import popen, stop as stop_process
-from ..setup_env import (FFMPEG_SIZE_MB, RUNTIME_SIZE_MB, SEPARATION_SIZE_MB, YOUTUBE_SIZE_MB,
-                         ffmpeg_ok, runtime_ok, separation_ok, youtube_ok, run_setup, torch_has_cuda)
+from ..setup_env import (FFMPEG_SIZE_MB, RUNTIME_SIZE_MB, SEPARATION_SIZE_MB, VCRUNTIME_SIZE_MB,
+                         YOUTUBE_SIZE_MB, ffmpeg_ok, runtime_ok, separation_ok, vcruntime_ok,
+                         youtube_ok, run_setup, torch_has_cuda)
 from ..fsutil import dir_bytes, is_link_like
 from .plans import plan_stems, selection_stems, validate_group
 from .progress import YTDLP_PROGRESS, clock_seconds, track_progress
@@ -40,8 +41,9 @@ def cli_failure_message(kind: str, code: int) -> str:
     """Human-readable subprocess failure; notes native Windows crashes when applicable."""
     if code in _WIN_ACCESS_VIOLATION:
         return (f"{kind} crashed (Windows access violation, code {code}). "
-                "Often a damaged separation engine or model cache — "
-                "try Settings → Components → Repair, then Storage → Clear models.")
+                "Most often an outdated Microsoft Visual C++ runtime — install the latest "
+                "(aka.ms/vs/17/release/vc_redist.x64.exe) and restart Unweave. If it still "
+                "crashes, try Settings → Components → Repair, then Storage → Clear models.")
     return f"{kind} exited with code {code}. See the process log."
 
 class JobLog:
@@ -372,13 +374,23 @@ class JobQueueMixin:
             {"id": "youtube", "label": "YouTube import support (yt-dlp)", "size_mb": YOUTUBE_SIZE_MB,
              "required": False, "missing": not youtube_ok(), "done": youtube_ok()},
         ]
+        # A Windows prerequisite, not part of the app: shown only when it needs installing,
+        # and kept for the rest of the setup job that installs it so the card doesn't vanish.
+        vc_ok = vcruntime_ok()
+        installing = any(job.get("kind") == "setup" and "vcruntime" in job.get("_stages", ())
+                         and job.get("status") in {"queued", "running", "cancelling"}
+                         for job in [*self.active_jobs.values(), *self.queue])
+        if sys.platform == "win32" and (not vc_ok or installing):
+            stages.insert(1, {"id": "vcruntime", "label": "Microsoft Visual C++ runtime",
+                              "size_mb": VCRUNTIME_SIZE_MB, "required": True,
+                              "missing": not vc_ok, "done": vc_ok})
         return {"required": any(s["required"] and s["missing"] for s in stages),
                 "stages": stages,
                 "total_mb": sum(s["size_mb"] for s in stages if s["missing"])}
 
     def start_setup(self, stages: list[str], *, repair: bool = False):
         with self.lock:
-            allowed = {"ffmpeg", "separation", "youtube"}
+            allowed = {"vcruntime", "ffmpeg", "separation", "youtube"}
             stages = [stage for stage in stages if stage in allowed]
             if not stages:
                 raise ValueError("Nothing to set up.")
@@ -529,12 +541,15 @@ class JobQueueMixin:
     def _separation_command(self, job, project: Path, original: str, stage: Path,
                             stems: list[str], group, split_leaves: bool, trim):
         range_args = ["--start", f"{trim[0]:.3f}", "--end", f"{trim[1]:.3f}"] if trim else []
+        # A native crash (torch/onnxruntime access violation) otherwise kills the CLI with
+        # no traceback; faulthandler prints the Python stack into the job log first.
+        python = [sys.executable, "-X", "faulthandler"]
         if job["kind"] == "split-guitar":
             shutil.copytree(project / 'stems', stage)
-            return [sys.executable, '-m', 'unweave', 'split-guitar',
+            return [*python, '-m', 'unweave', 'split-guitar',
                     '--file', str(stage / stem_file(stage, 'guitar')), '--output', str(stage),
                     '--cache', str(self.cache), *range_args]
-        command = [sys.executable, "-m", "unweave", "separate", "--file", str(project / original),
+        command = [*python, "-m", "unweave", "separate", "--file", str(project / original),
                    "--output", str(stage), "--cache", str(self.cache)]
         if group is not None:
             # An explicit plan may legitimately keep no stem of its own, so send

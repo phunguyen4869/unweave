@@ -12,6 +12,7 @@ from ..diagnostics import (build_diagnostics_text, host_arch, host_platform_name
                            host_python)
 from ..projects import atomic_json, list_projects
 from ..projects.metadata import MetadataLookup
+from ..setup_env import vcruntime_text
 from ..tools import env_first
 from ..fsutil import dir_bytes, is_link_like  # re-exported for tests that patch library.dir_bytes
 from .plans import CUSTOM_STEMS, PLAN_STEMS, plan_stems, selection_stems, validate_group
@@ -236,6 +237,7 @@ class Library(JobQueueMixin, SettingsMixin):
             platform_name=host_platform_name(),
             arch=host_arch(),
             python_version=host_python(),
+            vcruntime=vcruntime_text(),
             setup_stages=setup.get("stages"),
             job=public,
             log_lines=log_lines,
