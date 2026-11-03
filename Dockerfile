@@ -34,9 +34,14 @@ extras = project["optional-dependencies"]
 requirements = project["dependencies"] + extras["separation"] + extras["guitars"] + extras["youtube"]
 print("\n".join(dict.fromkeys(requirements)))
 EOF
-RUN pip install --index-url "$TORCH_INDEX_URL" torch \
+# gcc only for this layer: diffq (pulled in by audio-separator) ships no wheel for
+# Python 3.12 and builds a C extension from source.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc libc6-dev \
+    && pip install --index-url "$TORCH_INDEX_URL" torch \
     && pip install -r /tmp/requirements.txt \
-    && rm /tmp/requirements.txt
+    && apt-get purge -y --auto-remove gcc libc6-dev \
+    && rm -rf /var/lib/apt/lists/* /tmp/requirements.txt
 
 # Run from source rather than pip-installing the package: tools.app_version() and
 # setup_env read app/pyproject.toml next to the unweave/ package.
