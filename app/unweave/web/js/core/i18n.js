@@ -76,6 +76,7 @@ const STRINGS = {
   'setup.activity.download': {en: 'Downloading files — percentage may pause on large packages', vi: 'Đang tải tệp — % có thể đứng yên với gói lớn'},
   'setup.activity.downloadSpeed': {en: 'Downloading · {speed}', vi: 'Đang tải · {speed}'},
   'setup.activity.install': {en: 'Installing packages — this can take a few quiet minutes', vi: 'Đang cài gói — có thể im lặng vài phút'},
+  'setup.activity.unpacking': {en: 'Unpacking {count} packages · {elapsed} — torch is large, this is the slow part', vi: 'Đang giải nén {count} gói · {elapsed} — torch rất lớn, đây là bước lâu nhất'},
   'setup.activity.prepare': {en: 'Checking what is already installed', vi: 'Đang kiểm tra những gì đã có'},
   'setup.activity.finalize': {en: 'Verifying the install', vi: 'Đang kiểm tra bản cài'},
   'setup.totalSummary': {en: 'Download: ~{total} · usually 3–8 min on a typical connection', vi: 'Dung lượng tải: ~{total} · thường mất 3–8 phút với kết nối thông thường'},
