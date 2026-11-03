@@ -188,11 +188,37 @@
 
   code { background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
 
-  .lang-toggle {
+  .top-bar {
     position: fixed;
     top: 16px;
     right: 16px;
-    z-index: 10;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .coffee-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  }
+  .coffee-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(255,138,61,0.08);
+  }
+  .coffee-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .lang-toggle {
     display: flex;
     background: var(--card);
     border: 1px solid var(--border);
@@ -212,14 +238,99 @@
     font-family: inherit;
   }
   .lang-toggle button.active { background: var(--accent); color: #1a1105; }
+
+  .coffee-dialog {
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 0;
+    background: var(--card);
+    color: var(--text);
+    max-width: min(420px, calc(100vw - 32px));
+    width: 100%;
+    box-shadow: 0 30px 80px -24px rgba(0,0,0,0.85);
+  }
+  .coffee-dialog::backdrop {
+    background: rgba(8, 10, 14, 0.72);
+    backdrop-filter: blur(4px);
+  }
+  .coffee-dialog-inner { padding: 24px 24px 20px; text-align: center; }
+  .coffee-dialog h2 { margin: 0 0 8px; font-size: 1.25rem; }
+  .coffee-dialog .coffee-lead {
+    margin: 0 0 18px;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .coffee-qr {
+    display: block;
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto 14px;
+    border-radius: 12px;
+    background: #fff;
+  }
+  .coffee-hint {
+    margin: 0 0 8px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .coffee-account {
+    margin: 0 0 18px;
+    font-size: 0.88rem;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .coffee-account strong { font-weight: 600; }
+  .coffee-close {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .coffee-close:hover {
+    background: rgba(255,255,255,0.04);
+    border-color: #3d4458;
+  }
+  @media (max-width: 560px) {
+    .top-bar { top: 12px; right: 12px; left: 12px; justify-content: space-between; }
+    .coffee-btn span.coffee-label-long { display: none; }
+    .coffee-btn span.coffee-label-short { display: inline; }
+  }
+  .coffee-btn span.coffee-label-short { display: none; }
 </style>
 </head>
 <body>
 
-<div class="lang-toggle">
-  <button type="button" data-lang="en">EN</button>
-  <button type="button" data-lang="vi">VI</button>
+<div class="top-bar">
+  <button type="button" class="coffee-btn" id="coffee-open" aria-haspopup="dialog" aria-controls="coffee-dialog">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v7a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 2v2M10 2v2M14 2v2"/></svg>
+    <span class="coffee-label-long" data-i18n="coffee.btn">Buy me a coffee</span>
+    <span class="coffee-label-short" data-i18n="coffee.btnShort">Coffee</span>
+  </button>
+  <div class="lang-toggle">
+    <button type="button" data-lang="en">EN</button>
+    <button type="button" data-lang="vi">VI</button>
+  </div>
 </div>
+
+<dialog id="coffee-dialog" class="coffee-dialog" aria-labelledby="coffee-title">
+  <div class="coffee-dialog-inner">
+    <h2 id="coffee-title" data-i18n="coffee.title">Buy me a coffee</h2>
+    <p class="coffee-lead" data-i18n="coffee.lead">If Unweave helped you out, a coffee keeps the project going. Thank you.</p>
+    <img class="coffee-qr" src="assets/vietqr-donate.jpg" width="280" height="492" alt="VietQR donation code for VU VUONG AN, VietinBank" />
+    <p class="coffee-hint" data-i18n="coffee.hint">Scan with your banking app (VietQR / Napas 247)</p>
+    <p class="coffee-account">
+      <strong>VU VUONG AN</strong><br />
+      VietinBank · <span data-i18n="coffee.account">Account</span> 101868687524
+    </p>
+    <button type="button" class="coffee-close" id="coffee-close" data-i18n="coffee.close">Close</button>
+  </div>
+</dialog>
 
 <header class="hero">
   <div class="wrap hero-grid">
@@ -430,7 +541,14 @@
       "reqs.cpu": "<strong>CPU:</strong> Bộ xử lý 64-bit hiện đại (khuyến nghị 4+ nhân)",
       "reqs.gpu": "<strong>GPU:</strong> Tùy chọn — CPU vẫn chạy tốt",
       "footer.p1": "Giấy phép MIT. Thực hiện bởi <a href=\"https://github.com/um1chc5\">um1chc5</a>, dựa trên <a href=\"https://github.com/pedromtcosta/sound-razor\">Sound Razor</a> của pedromtcosta.",
-      "footer.p2": "<a href=\"https://github.com/um1chc5/unweave\">Mã nguồn trên GitHub</a> · <a href=\"https://github.com/um1chc5/unweave/releases\">Tất cả bản phát hành</a> · <a href=\"https://github.com/um1chc5/unweave/issues\">Báo lỗi</a>"
+      "footer.p2": "<a href=\"https://github.com/um1chc5/unweave\">Mã nguồn trên GitHub</a> · <a href=\"https://github.com/um1chc5/unweave/releases\">Tất cả bản phát hành</a> · <a href=\"https://github.com/um1chc5/unweave/issues\">Báo lỗi</a>",
+      "coffee.btn": "Mời tôi ly cà phê",
+      "coffee.btnShort": "Cà phê",
+      "coffee.title": "Mời tôi ly cà phê",
+      "coffee.lead": "Nếu Unweave hữu ích với bạn, một ly cà phê giúp dự án tiếp tục. Cảm ơn bạn.",
+      "coffee.hint": "Quét bằng app ngân hàng (VietQR / Napas 247)",
+      "coffee.account": "TK",
+      "coffee.close": "Đóng"
     }
   };
 
@@ -460,6 +578,18 @@
   var saved = localStorage.getItem("srLang");
   var initial = saved || (navigator.language && navigator.language.toLowerCase().indexOf("vi") === 0 ? "vi" : "en");
   applyLang(initial);
+
+  (function coffeeModal() {
+    var dialog = document.getElementById("coffee-dialog");
+    var openBtn = document.getElementById("coffee-open");
+    var closeBtn = document.getElementById("coffee-close");
+    if (!dialog || !openBtn || !closeBtn || typeof dialog.showModal !== "function") return;
+    openBtn.addEventListener("click", function () { dialog.showModal(); });
+    closeBtn.addEventListener("click", function () { dialog.close(); });
+    dialog.addEventListener("click", function (e) {
+      if (e.target === dialog) dialog.close();
+    });
+  })();
 
   (function loadInstallerInfo() {
     // Latest release's version and installer size, shown on the download button.
