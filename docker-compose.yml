@@ -1,0 +1,24 @@
+# Unweave on a Docker host (e.g. a Proxmox Docker LXC). See docs/docker.md.
+#   cp .env.example .env   # then set UNWEAVE_ALLOWED_HOSTS
+#   docker compose up -d --build
+services:
+  unweave:
+    build:
+      context: .
+      args:
+        TORCH_INDEX_URL: ${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cpu}
+    image: unweave:latest
+    container_name: unweave
+    restart: unless-stopped
+    ports:
+      - "${UNWEAVE_PORT:-8765}:8765"
+    environment:
+      # Hostnames/IPs you open the UI with (the LXC's IP, a DNS name, a proxy domain).
+      UNWEAVE_ALLOWED_HOSTS: ${UNWEAVE_ALLOWED_HOSTS:?Set UNWEAVE_ALLOWED_HOSTS in .env (see .env.example)}
+      UNWEAVE_THREADS: ${UNWEAVE_THREADS:-}
+      UNWEAVE_MAX_CONCURRENT_JOBS: ${UNWEAVE_MAX_CONCURRENT_JOBS:-1}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ${UNWEAVE_CONFIG_DIR:-./data/config}:/data/config
+      - ${UNWEAVE_MODELS_DIR:-./data/models}:/data/models
+      - ${UNWEAVE_PROJECTS_DIR:-./data/projects}:/data/projects

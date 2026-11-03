@@ -48,8 +48,12 @@ def parser() -> argparse.ArgumentParser:
     training.add_argument("dataset", type=Path)
     ui = commands.add_parser("ui", help="Open a local project library and stem player in your browser")
     ui.add_argument("--projects", type=Path, help="Projects folder; otherwise use the last selection or choose in the UI")
+    ui.add_argument("--host", default="127.0.0.1",
+                    help="Address to listen on (0.0.0.0 in Docker; also set UNWEAVE_ALLOWED_HOSTS)")
     ui.add_argument("--port", type=int, default=8765)
     ui.add_argument("--cache", type=Path, default=Path(".sound-razor/models"))
+    ui.add_argument("--config", type=Path, help="Settings file (default: .sound-razor/ui.json)")
+    ui.add_argument("--default-root", type=Path, help="Projects folder used when none is saved (default: output)")
     return root
 
 
@@ -85,7 +89,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         elif args.command == "ui":
             from .webui import serve
-            serve(args.projects, args.port, args.cache)
+            serve(args.projects, args.port, args.cache, config=args.config,
+                  default_root=args.default_root, host=args.host)
             return 0
         else:
             result = [str(path) for path in separate(

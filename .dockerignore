@@ -1,0 +1,5 @@
+# Only app/ goes into the image (see Dockerfile); keep the build context small.
+*
+!app/
+app/**/__pycache__
+app/**/*.pyc

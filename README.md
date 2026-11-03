@@ -83,6 +83,23 @@ WKWebView via pywebview. The script also writes an **unsigned**
 `~/Applications/Unweave.app` (right-click → Open the first time). No signing or
 notarization. See [docs/macos-install.md](docs/macos-install.md).
 
+## Docker / Proxmox LXC
+
+Run it as a headless server and open the UI from any browser on your network:
+
+```bash
+git clone https://github.com/um1chc5/unweave.git
+cd unweave
+cp .env.example .env        # set UNWEAVE_ALLOWED_HOSTS to the host's IP / domain
+mkdir -p data/config data/models data/projects && chown -R 1000:1000 data
+docker compose up -d --build
+```
+
+Then open `http://<host-IP>:8765`. The image ships FFmpeg and the separation engine
+(CPU PyTorch), so there's no first-run download beyond the AI models. See
+[docs/docker.md](docs/docker.md) for the Proxmox LXC setup, volumes, reverse proxy
+and GPU notes.
+
 ## System Requirements
 
 - **OS**: Windows 10/11 (64-bit); also Linux and macOS via the install scripts above

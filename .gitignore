@@ -39,3 +39,7 @@ Thumbs.db
 
 # Claude Code project state (local to this machine)
 .claude/
+
+# Docker deployment: local settings and data volumes
+.env
+data/

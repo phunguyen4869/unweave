@@ -3,6 +3,7 @@
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
+import os
 from pathlib import Path
 import secrets
 import subprocess
@@ -17,8 +18,36 @@ from ..tools import MISSING_FFMPEG, ensure_ffmpeg_on_path
 
 STATIC = Path(__file__).resolve().parents[1] / "web"
 
-def make_server(library: Library, port: int = 8765):
+
+def extra_allowed_hosts() -> set[str]:
+    """Hosts beyond 127.0.0.1/localhost the UI answers to, from UNWEAVE_ALLOWED_HOSTS
+    (comma-separated; "name" matches any port, "name:port" only that port, "*" any host).
+
+    The loopback-only default is what stops DNS rebinding: a page on some other site
+    that rebinds its name to this machine still sends its own Host header. A server
+    reached over the LAN (the Docker image) has to list the names people type instead."""
+    raw = os.environ.get("UNWEAVE_ALLOWED_HOSTS", "")
+    return {entry.strip().lower() for entry in raw.split(",") if entry.strip()}
+
+
+def host_allowed(host: str, port: int, extra: set[str]) -> bool:
+    host = host.lower()
+    if host in {f"127.0.0.1:{port}", f"localhost:{port}"}:
+        return True
+    if not host or not extra:
+        return False
+    if "*" in extra or host in extra:
+        return True
+    try:
+        name = urlsplit(f"//{host}").hostname
+    except ValueError:
+        return False
+    return name is not None and (name in extra or f"[{name}]" in extra)
+
+
+def make_server(library: Library, port: int = 8765, host: str = "127.0.0.1"):
     token = secrets.token_urlsafe(32)
+    extra_hosts = extra_allowed_hosts()
     router = build_router(library)
 
     class Handler(BaseHTTPRequestHandler):
@@ -62,9 +91,12 @@ def make_server(library: Library, port: int = 8765):
             try:
                 self.connection.settimeout(120)
                 host = self.headers.get("Host", "")
-                allowed = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
-                if host not in allowed or self.headers.get("Origin", f"http://{host}") != f"http://{host}":
-                    self.respond(403, {"error": "Local same-origin requests only."})
+                # https too for listed hosts: a TLS reverse proxy in front of the container.
+                origins = {f"http://{host}"} | ({f"https://{host}"} if extra_hosts else set())
+                if (not host_allowed(host, self.server.server_port, extra_hosts)
+                        or self.headers.get("Origin", f"http://{host}") not in origins):
+                    hint = "" if extra_hosts else " To open it from another machine, add this host to UNWEAVE_ALLOWED_HOSTS."
+                    self.respond(403, {"error": f"Local same-origin requests only.{hint}"})
                     return
                 url = urlsplit(self.path)
                 path = unquote(url.path)
@@ -97,13 +129,13 @@ def make_server(library: Library, port: int = 8765):
                 print(f"UI request failed: {error}", file=sys.stderr)
                 self.respond(500, {"error": "Unexpected server error; see the terminal."})
 
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = ThreadingHTTPServer((host, port), Handler)
     server.daemon_threads = True
     return server
 
 
 def serve(projects: Path | None, port: int, cache: Path, window=None, config: Path | None = None,
-          default_root: Path | None = None):
+          default_root: Path | None = None, host: str = "127.0.0.1"):
     if not ensure_ffmpeg_on_path():
         print(MISSING_FFMPEG, file=sys.stderr, flush=True)
     # Callers running from an installed, read-only location (Program Files) must pass
@@ -113,8 +145,11 @@ def serve(projects: Path | None, port: int, cache: Path, window=None, config: Pa
     config = config if config is not None else Path(".sound-razor/ui.json")
     default_root = default_root if default_root is not None else Path("output")
     library = Library(projects, config, cache, default_root, window=window)
-    server = make_server(library, port)
+    server = make_server(library, port, host)
     print(f"Unweave UI: http://127.0.0.1:{server.server_port}", flush=True)
+    if host not in {"127.0.0.1", "localhost"}:
+        print(f"Listening on {host}; other hosts allowed: {', '.join(sorted(extra_allowed_hosts())) or 'none'}",
+              flush=True)
     print("Open that address in your browser. Stop the server with Ctrl+C.", flush=True)
     try:
         server.serve_forever()
