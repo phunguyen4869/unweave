@@ -525,7 +525,10 @@ const STRINGS = {
   'diagnostics.copyReport': {en: 'Copy error report', vi: 'Sao chép báo cáo lỗi'},
   'diagnostics.copyDiagnostics': {en: 'Copy diagnostics', vi: 'Sao chép thông tin chẩn đoán'},
   'diagnostics.openGithub': {en: 'Open GitHub Issues', vi: 'Mở GitHub Issues'},
-  'diagnostics.openFacebook': {en: 'Facebook', vi: 'Facebook'},
+  'diagnostics.openFacebook': {
+    en: 'Send error via author’s Facebook',
+    vi: 'Gửi lỗi qua Facebook tác giả',
+  },
   'diagnostics.copied': {en: 'Copied — paste it in chat or a GitHub issue.', vi: 'Đã sao chép — dán vào chat hoặc GitHub issue.'},
   'diagnostics.empty': {en: 'Nothing to copy yet.', vi: 'Chưa có gì để sao chép.'},
   'diagnostics.fallbackTitle': {en: 'Diagnostics', vi: 'Thông tin chẩn đoán'},
