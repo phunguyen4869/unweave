@@ -7,7 +7,8 @@ from pathlib import Path
 import sys
 import tempfile
 from urllib.error import HTTPError
-from urllib.request import urlopen
+
+from ..netutil import urlopen
 
 
 # Verified against the upstream HTTPS artifacts on 2026-10-04. Pin the YAML as

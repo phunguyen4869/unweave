@@ -20,8 +20,8 @@ import time
 import tomllib
 import zipfile
 from pathlib import Path
-from urllib.request import urlopen
 
+from .netutil import urlopen
 from .processes import popen, stop as stop_process
 from .tools import EXE, embedded_runtime, ensure_ffmpeg_on_path, ffmpeg_dir, packages_prefix, MISSING_FFMPEG
 
