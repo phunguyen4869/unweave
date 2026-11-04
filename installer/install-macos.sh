@@ -14,6 +14,9 @@
 #   ./install-macos.sh --uninstall     # remove the app and launcher (keeps models + songs)
 #   ./install-macos.sh --purge         # uninstall + remove model cache and settings
 #   ./install-macos.sh --help
+#
+# Picks a Python 3.11-3.14 itself (onnxruntime has no 3.15 wheels yet);
+# PYTHON=/path/to/python3.13 ./install-macos.sh overrides that choice.
 
 set -euo pipefail
 
@@ -59,6 +62,49 @@ say()  { printf '\033[1;36m%s\033[0m\n' "$*"; }
 ok()   { printf '\033[1;32m%s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m%s\033[0m\n' "$*"; }
 die()  { printf '\033[1;31m%s\033[0m\n' "$*" >&2; exit 1; }
+
+# Supported interpreters, newest first. The upper bound is onnxruntime's: it
+# publishes no wheels past CPython 3.14, so a 3.15 venv installs the app fine and
+# then dies at the separation stage with "No matching distribution found".
+PYTHON_RANGE="3.11-3.14"
+PYTHON_CANDIDATES="python3.14 python3.13 python3.12 python3.11"
+UV_FALLBACK_PYTHON="3.13"
+
+python_ok() {
+    command -v "$1" >/dev/null 2>&1 || return 1
+    "$1" - <<'EOF' >/dev/null 2>&1
+import sys
+raise SystemExit(0 if (3, 11) <= sys.version_info < (3, 15) else 1)
+EOF
+}
+
+# Pick an interpreter: an explicit $PYTHON always wins (and is checked, not
+# silently replaced), then python3, then the newest supported pythonX.Y on PATH,
+# then one uv fetches for us.
+resolve_python() {
+    if [ -n "${PYTHON:-}" ]; then
+        command -v "$PYTHON" >/dev/null 2>&1 || die "PYTHON=$PYTHON not found."
+        python_ok "$PYTHON" || die "PYTHON=$PYTHON is $("$PYTHON" --version 2>&1), outside $PYTHON_RANGE."
+        return
+    fi
+    for candidate in python3 $PYTHON_CANDIDATES; do
+        if python_ok "$candidate"; then
+            PYTHON="$(command -v "$candidate")"
+            return
+        fi
+    done
+    if command -v uv >/dev/null 2>&1; then
+        say "No supported Python on PATH — asking uv for $UV_FALLBACK_PYTHON…"
+        if uv python install "$UV_FALLBACK_PYTHON" >/dev/null 2>&1; then
+            PYTHON="$(uv python find "$UV_FALLBACK_PYTHON" 2>/dev/null || true)"
+            if [ -n "$PYTHON" ] && python_ok "$PYTHON"; then
+                return
+            fi
+        fi
+    fi
+    die "No supported Python found. Unweave needs $PYTHON_RANGE (onnxruntime ships no wheels for 3.15+).
+Install one — brew install python@$UV_FALLBACK_PYTHON, or python.org — then run this script again."
+}
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -174,13 +220,8 @@ install() {
     [ -f "$PYPROJECT" ] || die "Can't find pyproject.toml at $PYPROJECT. Run this from a full checkout."
     [ -d "$APP_SRC" ] || die "Can't find the app/ folder at $APP_SRC. Run this from a full checkout."
 
-    PYTHON="${PYTHON:-python3}"
-    command -v "$PYTHON" >/dev/null 2>&1 || die "python3 not found. Install Python 3.11+ (python.org or Homebrew)."
-    "$PYTHON" - <<'EOF' || die "Python 3.11+ is required."
-import sys
-raise SystemExit(0 if sys.version_info >= (3, 11) else 1)
-EOF
-    ok "Python: $("$PYTHON" --version 2>&1)"
+    resolve_python
+    ok "Python: $("$PYTHON" --version 2>&1) ($PYTHON)"
 
     UV="$(command -v uv || true)"
     if [ -z "$UV" ]; then
@@ -193,6 +234,13 @@ EOF
     # No --system-site-packages: Cocoa/PyObjC arrive via pywebview's pip deps.
     mkdir -p "$PREFIX"
     VENV="$PREFIX/.venv"
+    # A venv is welded to the interpreter that created it, so one built on an
+    # unsupported Python can never install the separation engine. Rebuild it
+    # rather than reusing it into the same failure.
+    if [ -x "$VENV/bin/python" ] && ! python_ok "$VENV/bin/python"; then
+        warn "Existing venv runs $("$VENV/bin/python" --version 2>&1), outside $PYTHON_RANGE — rebuilding it."
+        rm -rf "$VENV"
+    fi
     if [ -x "$VENV/bin/python" ]; then
         say "Reusing the existing virtual environment at $VENV"
     else
