@@ -1,4 +1,4 @@
-import {$, el, api, notice, jobRunning} from '../core/core.js';
+import {$, el, api, notice, jobRunning, serverNow, duration} from '../core/core.js';
 import {store, nav} from '../core/store.js';
 import {t} from '../core/i18n.js';
 import {STAGE_ICONS, sizeText, speedText} from '../features/components.js';
@@ -87,9 +87,13 @@ export function renderSetup() {
   if (running) {
     const phase = ['download', 'install', 'prepare', 'finalize'].includes(job.phase) ? job.phase : 'install';
     activity.hidden = false;
+    // pip goes silent while it unpacks wheels; a ticking timer shows it's still working.
+    const unpacking = phase === 'install' && job.install_started_at;
     activity.textContent = speed
       ? t('setup.activity.downloadSpeed', {speed})
-      : t(`setup.activity.${phase}`);
+      : unpacking
+        ? t('setup.activity.unpacking', {count: job.install_packages || '', elapsed: duration(serverNow() - job.install_started_at)})
+        : t(`setup.activity.${phase}`);
   } else {
     activity.hidden = true;
     activity.textContent = '';

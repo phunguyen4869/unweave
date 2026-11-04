@@ -597,12 +597,21 @@
     var cacheKey = "srInstallerInfo";
     var cached = null;
     try { cached = JSON.parse(localStorage.getItem(cacheKey) || "null"); } catch (_) {}
-    if (cached && cached.text && Date.now() - cached.at < 3600000) { el.textContent = cached.text; return; }
+    var now = Date.now();
+    // Show the last known label (even if stale) so a failed refresh leaves it in place.
+    if (cached && cached.text) el.textContent = cached.text;
+    if (cached && cached.text && now - cached.at < 3600000) return;
+    // After a failure (e.g. 403 rate limit on a shared IP), wait 10 minutes before retrying.
+    if (cached && cached.failedAt && now - cached.failedAt < 600000) return;
+    function markFailed() {
+      var entry = {text: cached && cached.text, at: cached && cached.at, failedAt: Date.now()};
+      try { localStorage.setItem(cacheKey, JSON.stringify(entry)); } catch (_) {}
+    }
     fetch("https://api.github.com/repos/um1chc5/unweave/releases/latest")
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         var asset = data && data.assets && data.assets.find(function (a) { return a.name === "Unweave-Setup-x64.exe"; });
-        if (!asset) return;
+        if (!asset) { markFailed(); return; }
         var mb = asset.size / (1024 * 1024);
         var size = "~" + (mb < 10 ? mb.toFixed(1) : Math.round(mb)) + " MB";
         var version = data.tag_name ? data.tag_name.replace(/^v?/, "v") : "";
@@ -610,7 +619,7 @@
         el.textContent = text;
         try { localStorage.setItem(cacheKey, JSON.stringify({text: text, at: Date.now()})); } catch (_) {}
       })
-      .catch(function () {});
+      .catch(markFailed);
   })();
 })();
 </script>

@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import threading
 import time
 import tomllib
 import zipfile
@@ -258,7 +259,8 @@ def _tick(library, phase: str, stage: str | None, progress: int, *,
         job["stage"] = stage
         job["progress"] = max(0, min(100, int(progress)))
         if clear_download:
-            for key in ("download_received", "download_total", "download_speed"):
+            for key in ("download_received", "download_total", "download_speed",
+                        "install_started_at", "install_packages"):
                 job.pop(key, None)
             job["step_eta"] = None
             job["step_eta_at"] = None
@@ -471,6 +473,22 @@ def _pip_progress_from_line(line: str) -> dict | None:
     return {"received": received, "total": total, "speed": speed}
 
 
+# pip prints nothing while it unpacks wheels after "Installing collected packages",
+# which takes minutes for torch on a slow disk. Ease the bar through this share of
+# the stage band meanwhile, halving the remaining gap every INSTALL_CREEP_HALF_LIFE_S.
+INSTALL_CREEP = (0.65, 0.95)
+INSTALL_CREEP_HALF_LIFE_S = 60.0
+
+
+def _creep_install(library, stage: str, start_progress: int, band: int,
+                   started: float, stop: threading.Event) -> None:
+    low, high = INSTALL_CREEP
+    while not stop.wait(1.0):
+        elapsed = time.time() - started
+        fraction = high - (high - low) * 0.5 ** (elapsed / INSTALL_CREEP_HALF_LIFE_S)
+        _tick(library, "install", stage, start_progress + int(band * fraction))
+
+
 def _pip_install(library, requirements: list[str], stage: str, start_progress: int, band: int,
                  *, force=False) -> int:
     """pip-install a requirement list, streaming progress through the job."""
@@ -502,6 +520,15 @@ def _pip_install(library, requirements: list[str], stage: str, start_progress: i
         hit = {name: False for name in milestones}
         output = []
         file_total = None
+        creep_stop = threading.Event()
+        creep = None
+
+        def stop_creep():
+            # Join so a last creep tick cannot land after (and undo) the final one.
+            creep_stop.set()
+            if creep is not None:
+                creep.join()
+
         try:
             for raw in process.stdout:
                 if _cancelling(library):
@@ -539,11 +566,25 @@ def _pip_install(library, requirements: list[str], stage: str, start_progress: i
                     for name, fraction in milestones.items():
                         if not hit[name] and line.startswith(name):
                             hit[name] = True
+                            if name == "Successfully installed":
+                                stop_creep()
                             clear = name != "Collecting"
                             _tick(library, "install", stage,
                                   start_progress + int(band * fraction),
                                   clear_download=clear)
+                            if name == "Installing collected packages":
+                                started = time.time()
+                                packages = [p for p in line.partition(":")[2].split(",") if p.strip()]
+                                with library.lock:
+                                    if library.job is not None:
+                                        library.job["install_started_at"] = started
+                                        library.job["install_packages"] = len(packages)
+                                creep = threading.Thread(target=_creep_install, daemon=True,
+                                                         args=(library, stage, start_progress, band,
+                                                               started, creep_stop))
+                                creep.start()
         finally:
+            stop_creep()
             if process.poll() is None:
                 stop_process(process, force=True)
         code = process.wait()

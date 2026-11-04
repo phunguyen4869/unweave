@@ -4,6 +4,7 @@ import sys
 import tarfile
 import tempfile
 import threading
+import time
 from types import SimpleNamespace
 import unittest
 from pathlib import Path
@@ -137,6 +138,39 @@ class SetupHealthTests(unittest.TestCase):
         self.assertIn("--force-reinstall", commands[0])
         self.assertIn("--ignore-installed", commands[1])
         self.assertTrue(any("Damaged package metadata" in line for line in library.logs))
+
+    def test_pip_install_creeps_while_unpacking(self):
+        library = SimpleNamespace(lock=threading.Lock(), logs=[], process=None,
+                                  job={"status": "running"})
+        seen = {}
+
+        def lines():
+            yield "Installing collected packages: numpy, torch, librosa"
+            seen["started"] = dict(library.job)
+            time.sleep(1.5)  # pip is silent while it unpacks; the creep thread ticks
+            seen["quiet"] = library.job["progress"]
+            yield "Successfully installed numpy-2.0 torch-2.15 librosa-0.11"
+
+        class FakeProcess:
+            stdout = lines()
+
+            def poll(self):
+                return 0
+
+            def wait(self):
+                return 0
+
+        with patch.object(setup_env.subprocess, "Popen", return_value=FakeProcess()), \
+             patch.object(setup_env, "INSTALL_CREEP_HALF_LIFE_S", 0.5):
+            progress = setup_env._pip_install(library, ["torch"], "separation", 0, 100)
+
+        self.assertEqual(seen["started"]["progress"], 65)
+        self.assertEqual(seen["started"]["install_packages"], 3)
+        self.assertGreater(seen["quiet"], 65)
+        self.assertLess(seen["quiet"], 96)
+        self.assertEqual(progress, 100)
+        self.assertEqual(library.job["progress"], 100)
+        self.assertNotIn("install_started_at", library.job)
 
     def test_repair_reinstalls_present_ffmpeg(self):
         library = SimpleNamespace(lock=threading.Lock(), logs=[], process=None,
