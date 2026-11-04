@@ -172,6 +172,103 @@ class SetupHealthTests(unittest.TestCase):
         self.assertEqual(library.job["progress"], 100)
         self.assertNotIn("install_started_at", library.job)
 
+    def test_vcruntime_ok_requires_current_runtime(self):
+        cases = {"14.30.30704": False, "14.43.0": False, "14.44.35211": True,
+                 "14.51.36231": True, "none": False}
+        with patch.object(setup_env.sys, "platform", "win32"):
+            for version, expected in cases.items():
+                with patch.dict(setup_env.os.environ, {setup_env.VCRUNTIME_OVERRIDE_ENV: version}):
+                    self.assertEqual(setup_env.vcruntime_ok(), expected, version)
+        with patch.object(setup_env.sys, "platform", "linux"):
+            self.assertTrue(setup_env.vcruntime_ok())
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows registry")
+    def test_vcruntime_version_reads_registry(self):
+        with patch.dict(setup_env.os.environ, {}, clear=False):
+            setup_env.os.environ.pop(setup_env.VCRUNTIME_OVERRIDE_ENV, None)
+            version = setup_env.vcruntime_version()
+        self.assertTrue(version is None or (len(version) == 3 and version[0] == 14))
+
+    def test_setup_installs_vcruntime_first(self):
+        library = SimpleNamespace(lock=threading.Lock(), logs=[], process=None,
+                                  job={"status": "running", "progress": 0})
+        order = []
+        state = {"vc": False}
+
+        def fake_vcruntime(_library, start, band):
+            order.append("vcruntime")
+            state["vc"] = True
+            return start + band
+
+        def fake_ffmpeg(_library, start, band):
+            order.append("ffmpeg")
+            return start + band
+
+        with patch.object(setup_env, "vcruntime_ok", side_effect=lambda: state["vc"]), \
+             patch.object(setup_env, "ffmpeg_ok", return_value=False), \
+             patch.object(setup_env, "_install_vcruntime", side_effect=fake_vcruntime), \
+             patch.object(setup_env, "_install_ffmpeg", side_effect=fake_ffmpeg), \
+             patch.object(setup_env, "_ensure_pip"), \
+             patch.object(setup_env, "ensure_ffmpeg_on_path", return_value=True):
+            setup_env.run_setup(library, ["ffmpeg", "vcruntime"])
+
+        self.assertEqual(order, ["vcruntime", "ffmpeg"])
+        self.assertEqual(library.job["status"], "succeeded")
+
+    def test_repair_never_installs_vcruntime_off_windows(self):
+        library = SimpleNamespace(lock=threading.Lock(), logs=[], process=None,
+                                  job={"status": "running", "progress": 0})
+        for name in ("linux", "darwin"):
+            library.job = {"status": "running", "progress": 0}
+            with patch.object(setup_env.sys, "platform", name), \
+                 patch.dict(setup_env.os.environ, {}), \
+                 patch.object(setup_env, "_install_vcruntime") as install:
+                setup_env.os.environ.pop(setup_env.VCRUNTIME_OVERRIDE_ENV, None)
+                setup_env.run_setup(library, ["vcruntime"], repair=True)
+                self.assertEqual(setup_env.vcruntime_text(), "n/a")
+                self.assertTrue(setup_env.vcruntime_ok())
+            install.assert_not_called()
+            self.assertEqual(library.job["status"], "succeeded")
+
+    def test_install_vcruntime_refuses_unsigned_download(self):
+        library = SimpleNamespace(lock=threading.Lock(), logs=[], process=None,
+                                  job={"status": "running"})
+
+        def fake_download(_library, _url, path, *args, **kwargs):
+            path.write_bytes(b"MZ not really an installer")
+
+        with patch.object(setup_env, "_download_archive", side_effect=fake_download), \
+             patch.object(setup_env, "_signed_by_microsoft", return_value=False), \
+             patch.object(setup_env, "_run_elevated") as elevated:
+            with self.assertRaises(RuntimeError) as caught:
+                setup_env._install_vcruntime(library, 0, 30)
+        elevated.assert_not_called()
+        self.assertIn("not signed by Microsoft", str(caught.exception))
+
+    def test_install_vcruntime_accepts_newer_already_installed(self):
+        library = SimpleNamespace(lock=threading.Lock(), logs=[], process=None,
+                                  job={"status": "running"})
+
+        def fake_download(_library, _url, path, *args, **kwargs):
+            path.write_bytes(b"MZ")
+
+        with patch.dict(setup_env.os.environ, {setup_env.VCRUNTIME_OVERRIDE_ENV: "14.30.0"}), \
+             patch.object(setup_env, "_download_archive", side_effect=fake_download), \
+             patch.object(setup_env, "_signed_by_microsoft", return_value=True), \
+             patch.object(setup_env, "_run_elevated", return_value=1638) as elevated:
+            self.assertEqual(setup_env._install_vcruntime(library, 0, 30), 30)
+            self.assertNotIn(setup_env.VCRUNTIME_OVERRIDE_ENV, setup_env.os.environ)
+        self.assertEqual(elevated.call_args.args[1], "/install /quiet /norestart")
+
+    @unittest.skipUnless(sys.platform == "win32", "Authenticode")
+    def test_signed_by_microsoft_checks_real_signatures(self):
+        notepad = Path(setup_env.os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "notepad.exe"
+        self.assertTrue(setup_env._signed_by_microsoft(notepad))
+        with tempfile.TemporaryDirectory() as temporary:
+            unsigned = Path(temporary) / "fake.exe"
+            unsigned.write_bytes(b"MZ" + b"\0" * 64)
+            self.assertFalse(setup_env._signed_by_microsoft(unsigned))
+
     def test_repair_reinstalls_present_ffmpeg(self):
         library = SimpleNamespace(lock=threading.Lock(), logs=[], process=None,
                                   job={"status": "running", "progress": 0})

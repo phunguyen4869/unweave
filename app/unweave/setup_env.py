@@ -6,6 +6,7 @@ already uses for separation jobs — no new frontend plumbing.
 """
 
 import importlib.util
+import os
 import platform
 import re
 import shutil
@@ -19,8 +20,8 @@ import time
 import tomllib
 import zipfile
 from pathlib import Path
-from urllib.request import urlopen
 
+from .netutil import urlopen
 from .processes import popen, stop as stop_process
 from .tools import EXE, embedded_runtime, ensure_ffmpeg_on_path, ffmpeg_dir, packages_prefix, MISSING_FFMPEG
 
@@ -55,6 +56,20 @@ SEPARATION_SIZE_MB = 1600
 YOUTUBE_SIZE_MB = 15
 RUNTIME_SIZE_MB = 50
 
+# torch and onnxruntime use the system msvcp140.dll (torch ships none) and are built
+# with MSVC 14.42/14.44. An older Visual C++ runtime crashes them with an access
+# violation (the VS 17.10 std::mutex change), so Windows setup installs a current one.
+VCRUNTIME_URL = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+VCRUNTIME_MIN = (14, 44)
+VCRUNTIME_SIZE_MB = 25
+_VCRUNTIME_KEY = r"SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64"
+# Fakes the detected version ("14.30.0", or "none") to try the setup card on a machine
+# that already has a current runtime. Dropped once the runtime installs.
+VCRUNTIME_OVERRIDE_ENV = "UNWEAVE_VCRUNTIME_OVERRIDE"
+# vc_redist exits that leave a usable runtime: installed, a newer one is already
+# there, installed with a restart pending.
+_VCRUNTIME_OK_EXITS = {0, 1638, 3010}
+
 
 def ffmpeg_url() -> str:
     """Primary FFmpeg archive URL for this platform (for logs / single-archive hosts)."""
@@ -83,7 +98,7 @@ def _host_arch_ok() -> bool:
     return True
 
 
-STAGE_ORDER = ("ffmpeg", "separation", "youtube")
+STAGE_ORDER = ("vcruntime", "ffmpeg", "separation", "youtube")
 
 # Progress budget: 0..90 is split across the stages being downloaded, the last
 # 10 points are the verify/finalize stretch.
@@ -194,6 +209,44 @@ def youtube_ok() -> bool:
     except Exception:
         return True
     return len(parts) == 3 and parts >= _YTDLP_MIN
+
+
+def _parse_vcruntime(text: str) -> tuple[int, int, int] | None:
+    parts = [int(piece) for piece in re.findall(r"\d+", text)[:3]]
+    return tuple(parts + [0] * (3 - len(parts))) if parts else None
+
+
+def vcruntime_version() -> tuple[int, int, int] | None:
+    """Installed x64 Visual C++ runtime as (major, minor, build), or None if absent."""
+    override = os.environ.get(VCRUNTIME_OVERRIDE_ENV)
+    if override:
+        return _parse_vcruntime(override)
+    if sys.platform != "win32":
+        return None
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, _VCRUNTIME_KEY, 0,
+                            winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as key:
+            if not winreg.QueryValueEx(key, "Installed")[0]:
+                return None
+            return tuple(int(winreg.QueryValueEx(key, name)[0]) for name in ("Major", "Minor", "Bld"))
+    except (OSError, ValueError):
+        return None
+
+
+def vcruntime_text() -> str:
+    """The runtime version for diagnostics: "14.51.36231", "missing", or "n/a"."""
+    if sys.platform != "win32" and not os.environ.get(VCRUNTIME_OVERRIDE_ENV):
+        return "n/a"
+    version = vcruntime_version()
+    return ".".join(map(str, version)) if version else "missing"
+
+
+def vcruntime_ok() -> bool:
+    if sys.platform != "win32":
+        return True
+    version = vcruntime_version()
+    return version is not None and version[:2] >= VCRUNTIME_MIN
 
 
 def probe_separation() -> str:
@@ -364,7 +417,8 @@ def _extract_ffmpeg_tar(archive: Path, install: Path) -> None:
 
 
 def _download_archive(library, url: str, archive: Path, start_progress: int, band: int,
-                      *, progress_offset: float = 0.0, progress_span: float = 1.0) -> None:
+                      *, progress_offset: float = 0.0, progress_span: float = 1.0,
+                      stage: str = "ffmpeg", label: str = "FFmpeg") -> None:
     """Fetch one archive into `archive`, reporting progress into the setup job."""
     # Cap runaway downloads (a misbehaving proxy once filled a disk with 16 GB
     # "ffmpeg.zip" files). Abort past Content-Length, or 500 MB when unknown.
@@ -385,7 +439,7 @@ def _download_archive(library, url: str, archive: Path, start_progress: int, ban
                 stream.write(block)
                 received += len(block)
                 if received > max_bytes:
-                    raise RuntimeError("FFmpeg download was larger than expected")
+                    raise RuntimeError(f"{label} download was larger than expected")
                 now = time.monotonic()
                 elapsed = now - started
                 # Throttle UI ticks; average speed from the whole transfer so far
@@ -397,21 +451,21 @@ def _download_archive(library, url: str, archive: Path, start_progress: int, ban
                     if expected:
                         fraction = progress_offset + progress_span * (received / expected)
                         pct = start_progress + int(fraction * band)
-                        _tick(library, "download", "ffmpeg",
+                        _tick(library, "download", stage,
                               start_progress + min(band, pct - start_progress),
                               received=received, total=expected, speed=speed,
                               step_eta=eta)
                     else:
-                        _tick(library, "download", "ffmpeg", start_progress,
+                        _tick(library, "download", stage, start_progress,
                               received=received, speed=speed)
                 elif expected is None and received % (32 * 1024 * 1024) == 0:
                     _log(library, f"Downloaded {received // (1024 * 1024)} MiB…")
             if expected is not None and received != expected:
-                raise RuntimeError("Incomplete FFmpeg download. Retry setup.")
+                raise RuntimeError(f"Incomplete {label} download. Retry setup.")
             if received:
                 elapsed = max(time.monotonic() - started, 1e-6)
                 fraction = progress_offset + progress_span
-                _tick(library, "download", "ffmpeg",
+                _tick(library, "download", stage,
                       start_progress + int(fraction * band),
                       received=received, total=expected or received,
                       speed=received / elapsed, step_eta=0)
@@ -421,6 +475,87 @@ def _download_archive(library, url: str, archive: Path, start_progress: int, ban
         except OSError:
             pass
         raise
+
+
+def _signed_by_microsoft(path: Path) -> bool:
+    """Only run a downloaded installer whose Authenticode signature is Microsoft's."""
+    # The path goes through the environment, so no quoting of it into the script.
+    script = ("$s = Get-AuthenticodeSignature -LiteralPath $env:UNWEAVE_SIGNED_FILE; "
+              '"$($s.Status)|$($s.SignerCertificate.Subject)"')
+    try:
+        result = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+                                capture_output=True, text=True, errors="replace", timeout=60,
+                                env=dict(os.environ, UNWEAVE_SIGNED_FILE=str(path)),
+                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    status, _, subject = result.stdout.strip().partition("|")
+    return status == "Valid" and "O=Microsoft Corporation" in subject
+
+
+def _run_elevated(executable: Path, arguments: str) -> int:
+    """Run `executable` through the Windows administrator (UAC) prompt and wait for
+    its exit code. The app runs unelevated, and vc_redist installs machine-wide."""
+    import ctypes
+    from ctypes import wintypes
+
+    class ShellExecuteInfo(ctypes.Structure):
+        _fields_ = [("cbSize", wintypes.DWORD), ("fMask", ctypes.c_ulong), ("hwnd", wintypes.HWND),
+                    ("lpVerb", wintypes.LPCWSTR), ("lpFile", wintypes.LPCWSTR),
+                    ("lpParameters", wintypes.LPCWSTR), ("lpDirectory", wintypes.LPCWSTR),
+                    ("nShow", ctypes.c_int), ("hInstApp", wintypes.HINSTANCE),
+                    ("lpIDList", ctypes.c_void_p), ("lpClass", wintypes.LPCWSTR),
+                    ("hkeyClass", wintypes.HKEY), ("dwHotKey", wintypes.DWORD),
+                    ("hIconOrMonitor", wintypes.HANDLE), ("hProcess", wintypes.HANDLE)]
+
+    shell32 = ctypes.WinDLL("shell32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    shell32.ShellExecuteExW.argtypes = [ctypes.POINTER(ShellExecuteInfo)]
+    shell32.ShellExecuteExW.restype = wintypes.BOOL
+    kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    see_mask_nocloseprocess, see_mask_noasync, sw_hide = 0x40, 0x100, 0
+    info = ShellExecuteInfo(cbSize=ctypes.sizeof(ShellExecuteInfo),
+                            fMask=see_mask_nocloseprocess | see_mask_noasync,
+                            lpVerb="runas", lpFile=str(executable), lpParameters=arguments,
+                            nShow=sw_hide)
+    if not shell32.ShellExecuteExW(ctypes.byref(info)):
+        error = ctypes.get_last_error()
+        if error == 1223:  # ERROR_CANCELLED: the UAC prompt was declined
+            raise RuntimeError("Administrator permission was declined, so the Visual C++ runtime "
+                               "was not installed. Try again and choose Yes on the Windows prompt.")
+        raise ctypes.WinError(error)
+    try:
+        kernel32.WaitForSingleObject(info.hProcess, 0xFFFFFFFF)
+        code = wintypes.DWORD()
+        kernel32.GetExitCodeProcess(info.hProcess, ctypes.byref(code))
+        return code.value
+    finally:
+        kernel32.CloseHandle(info.hProcess)
+
+
+def _install_vcruntime(library, start_progress: int, band: int) -> int:
+    """Download Microsoft's x64 Visual C++ runtime and install it. Returns the progress reached."""
+    download_band = int(band * 0.7)
+    with tempfile.TemporaryDirectory(prefix="unweave-vcredist-") as temporary:
+        installer = Path(temporary) / "vc_redist.x64.exe"
+        _log(library, f"Downloading the Microsoft Visual C++ runtime ({VCRUNTIME_URL})…")
+        _download_archive(library, VCRUNTIME_URL, installer, start_progress, download_band,
+                          stage="vcruntime", label="Visual C++ runtime")
+        _tick(library, "install", "vcruntime", start_progress + download_band, clear_download=True)
+        if not _signed_by_microsoft(installer):
+            raise RuntimeError("The downloaded Visual C++ runtime is not signed by Microsoft, "
+                               "so it was not run. Retry setup.")
+        _log(library, "Installing the Visual C++ runtime — choose Yes on the Windows prompt…")
+        code = _run_elevated(installer, "/install /quiet /norestart")
+    if code not in _VCRUNTIME_OK_EXITS:
+        raise RuntimeError(f"The Visual C++ runtime installer failed (exit {code}).")
+    os.environ.pop(VCRUNTIME_OVERRIDE_ENV, None)
+    _log(library, "Visual C++ runtime installed." if code != 3010
+         else "Visual C++ runtime installed; Windows will finish it on the next restart.")
+    _tick(library, "install", "vcruntime", start_progress + band, clear_download=True)
+    return start_progress + band
 
 
 def _install_ffmpeg(library, start_progress: int, band: int) -> int:
@@ -606,12 +741,15 @@ def run_setup(library, stages: list[str], *, repair: bool = False) -> None:
     When ``repair`` is true, requested stages are reinstalled even if already present
     (FFmpeg downloaded again; pip stages with ``--force-reinstall``).
     """
-    needed = [stage for stage in STAGE_ORDER if stage in stages]
+    # The Visual C++ runtime is Windows-only; even a repair request never runs it elsewhere.
+    needed = [stage for stage in STAGE_ORDER if stage in stages
+              and (stage != "vcruntime" or sys.platform == "win32")]
     if repair:
         missing = list(needed)
     else:
         missing = [stage for stage in needed
-                   if (stage == "ffmpeg" and not ffmpeg_ok())
+                   if (stage == "vcruntime" and not vcruntime_ok())
+                   or (stage == "ffmpeg" and not ffmpeg_ok())
                    or (stage == "separation" and not separation_ok())
                    or (stage == "youtube" and not youtube_ok())]
     if not missing:
@@ -626,6 +764,10 @@ def run_setup(library, stages: list[str], *, repair: bool = False) -> None:
     try:
         _tick(library, "prepare", None, 0, clear_download=True)
         _log(library, "Repairing installed components…" if repair else "Checking what's already installed…")
+
+        # First, so the separation engine never runs (or gets probed) on an old runtime.
+        if "vcruntime" in missing and (repair or not vcruntime_ok()):
+            cursor = _install_vcruntime(library, cursor, band)
 
         if "ffmpeg" in missing and (repair or not ffmpeg_ok()):
             if repair and ffmpeg_ok():
@@ -661,6 +803,8 @@ def run_setup(library, stages: list[str], *, repair: bool = False) -> None:
         _tick(library, "finalize", None, min(100, cursor + FINALIZE_BAND), clear_download=True)
         if not ensure_ffmpeg_on_path():
             raise RuntimeError(MISSING_FFMPEG)
+        if "vcruntime" in missing and not vcruntime_ok():
+            raise RuntimeError("The Visual C++ runtime install did not take effect; restart Windows and try again.")
         if "separation" in missing and not separation_ok():
             raise RuntimeError("Separation engine install did not take effect; restart the app and try again.")
         if "youtube" in missing and not youtube_ok():
