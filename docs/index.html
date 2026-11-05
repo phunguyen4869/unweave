@@ -6,6 +6,7 @@
 <title>Unweave — AI Audio Stem Separation</title>
 <meta name="description" content="Unweave splits any song into vocals, drums, bass, guitar, piano and more using local AI models. Free, offline — Windows, Linux, and macOS." />
 <link rel="icon" href="assets/icon-256.png" />
+<link rel="stylesheet" href="assets/site.css" />
 
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Unweave — AI Audio Stem Separation" />
@@ -20,29 +21,6 @@
 <meta name="twitter:description" content="Split any song into vocals, drums, bass, guitar, piano and more using local AI models. Free, offline — Windows, Linux, and macOS." />
 <meta name="twitter:image" content="https://um1chc5.github.io/unweave/assets/og-image.png" />
 <style>
-  :root {
-    --bg: #0f1115;
-    --bg-alt: #151822;
-    --card: #1b1f2a;
-    --border: #2a2f3d;
-    --text: #e8eaf0;
-    --muted: #9aa1b2;
-    --accent: #ff8a3d;
-    --accent-dark: #e06f26;
-  }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.55;
-  }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
-
   header.hero {
     padding: 72px 0 56px;
     background: radial-gradient(ellipse at 20% -10%, rgba(255,138,61,0.16), transparent 55%),
@@ -60,35 +38,6 @@
   h1 { font-size: 2.6rem; margin: 18px 0 8px; letter-spacing: -0.02em; }
   .tagline { font-size: 1.15rem; color: var(--muted); max-width: 420px; margin: 0 0 28px; }
 
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    background: var(--accent);
-    color: #1a1105;
-    font-weight: 600;
-    padding: 14px 28px;
-    border-radius: 10px;
-    font-size: 1.05rem;
-    border: 1.5px solid transparent;
-    transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-  }
-  .btn:hover { background: var(--accent-dark); text-decoration: none; transform: translateY(-1px); }
-  .btn svg { width: 20px; height: 20px; flex-shrink: 0; }
-  .btn-ghost {
-    background: transparent;
-    color: var(--text);
-    border-color: var(--border);
-    font-size: 0.95rem;
-    padding: 12px 20px;
-  }
-  .btn-ghost:hover {
-    background: rgba(255,255,255,0.04);
-    border-color: #3d4458;
-    color: var(--text);
-    transform: translateY(-1px);
-  }
   .installer-size { font-weight: 500; opacity: 0.75; font-size: 0.92em; }
   .cta-row {
     display: flex;
@@ -183,140 +132,31 @@
   .reqs li { margin: 6px 0; }
   .reqs strong { color: var(--text); }
 
-  footer { padding: 40px 0; text-align: center; color: var(--muted); font-size: 0.9rem; }
-  footer a { color: var(--muted); }
-
-  code { background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
-
-  .top-bar {
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .coffee-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border: 1px solid var(--border);
-    background: var(--card);
-    color: var(--text);
-    font-size: 0.82rem;
-    font-weight: 600;
-    padding: 8px 14px;
-    border-radius: 999px;
-    cursor: pointer;
-    font-family: inherit;
-    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
-  }
-  .coffee-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: rgba(255,138,61,0.08);
-  }
-  .coffee-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
-  .lang-toggle {
-    display: flex;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 3px;
-    gap: 2px;
-  }
-  .lang-toggle button {
-    border: none;
-    background: transparent;
-    color: var(--muted);
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding: 6px 12px;
-    border-radius: 999px;
-    cursor: pointer;
-    font-family: inherit;
-  }
-  .lang-toggle button.active { background: var(--accent); color: #1a1105; }
-
-  .coffee-dialog {
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 0;
-    background: var(--card);
-    color: var(--text);
-    max-width: min(420px, calc(100vw - 32px));
-    width: 100%;
-    box-shadow: 0 30px 80px -24px rgba(0,0,0,0.85);
-  }
-  .coffee-dialog::backdrop {
-    background: rgba(8, 10, 14, 0.72);
-    backdrop-filter: blur(4px);
-  }
-  .coffee-dialog-inner { padding: 24px 24px 20px; text-align: center; }
-  .coffee-dialog h2 { margin: 0 0 8px; font-size: 1.25rem; }
-  .coffee-dialog .coffee-lead {
-    margin: 0 0 18px;
-    color: var(--muted);
-    font-size: 0.95rem;
-    line-height: 1.5;
-  }
-  .coffee-qr {
-    display: block;
-    width: 100%;
-    max-width: 280px;
-    margin: 0 auto 14px;
-    border-radius: 12px;
-    background: #fff;
-  }
-  .coffee-hint {
-    margin: 0 0 8px;
-    font-size: 0.85rem;
-    color: var(--muted);
-  }
-  .coffee-account {
-    margin: 0 0 18px;
-    font-size: 0.88rem;
-    color: var(--text);
-    line-height: 1.55;
-  }
-  .coffee-account strong { font-weight: 600; }
-  .coffee-close {
-    width: 100%;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text);
-    font: inherit;
-    font-weight: 600;
-    padding: 10px 16px;
-    border-radius: 10px;
-    cursor: pointer;
-  }
-  .coffee-close:hover {
-    background: rgba(255,255,255,0.04);
-    border-color: #3d4458;
-  }
-  @media (max-width: 560px) {
-    .top-bar { top: 12px; right: 12px; left: 12px; justify-content: space-between; }
-    .coffee-btn span.coffee-label-long { display: none; }
-    .coffee-btn span.coffee-label-short { display: inline; }
-  }
-  .coffee-btn span.coffee-label-short { display: none; }
+  .guide-link { margin: 28px 0 0; }
 </style>
 </head>
 <body>
 
-<div class="top-bar">
-  <button type="button" class="coffee-btn" id="coffee-open" aria-haspopup="dialog" aria-controls="coffee-dialog">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v7a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 2v2M10 2v2M14 2v2"/></svg>
-    <span class="coffee-label-long" data-i18n="coffee.btn">Buy me a coffee</span>
-    <span class="coffee-label-short" data-i18n="coffee.btnShort">Coffee</span>
-  </button>
-  <div class="lang-toggle">
-    <button type="button" data-lang="en">EN</button>
-    <button type="button" data-lang="vi">VI</button>
+<header class="site-header">
+  <div class="wrap site-header-inner">
+    <a class="site-brand" href="./"><img src="assets/icon-256.png" alt="" /><span>Unweave</span></a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="./" aria-current="page" data-i18n="nav.home">Home</a>
+      <a href="guide.html" data-i18n="nav.guide">Guide</a>
+    </nav>
+    <div class="site-actions">
+      <button type="button" class="coffee-btn" id="coffee-open" aria-haspopup="dialog" aria-controls="coffee-dialog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v7a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 2v2M10 2v2M14 2v2"/></svg>
+        <span class="coffee-label-long" data-i18n="coffee.btn">Buy me a coffee</span>
+        <span class="coffee-label-short" data-i18n="coffee.btnShort">Coffee</span>
+      </button>
+      <div class="lang-toggle">
+        <button type="button" data-lang="en">EN</button>
+        <button type="button" data-lang="vi">VI</button>
+      </div>
+    </div>
   </div>
-</div>
+</header>
 
 <dialog id="coffee-dialog" class="coffee-dialog" aria-labelledby="coffee-title">
   <div class="coffee-dialog-inner">
@@ -426,7 +266,7 @@
         <div class="num">2</div>
         <div>
           <strong data-i18n="step.2.strong">Approve the one-time setup.</strong>
-          <p data-i18n="step.2.p">On first launch the app window opens immediately and asks you to consent to downloading FFmpeg and the PyTorch/audio-separation stack (~1.6&nbsp;GB total).</p>
+          <p data-i18n="step.2.p">On first launch the app window opens immediately and asks you to consent to downloading FFmpeg and the PyTorch/audio-separation stack (~1.7&nbsp;GB total).</p>
         </div>
       </div>
       <div class="step">
@@ -437,6 +277,7 @@
         </div>
       </div>
     </div>
+    <p class="guide-link"><a class="btn btn-ghost" href="guide.html" data-i18n="start.guideLink">Watch the step-by-step guide</a></p>
   </div>
 </section>
 
@@ -496,9 +337,8 @@
 </footer>
 
 <script>
-(function () {
-  var TRANSLATIONS = {
-    vi: {
+window.SITE_TRANSLATIONS = {
+  vi: {
       "hero.tagline": "Tách mọi bài hát thành giọng hát, trống, bass, guitar, piano và hơn thế nữa — bằng AI chạy hoàn toàn trên máy của bạn.",
       "hero.btn": "Tải cho Windows",
       "hero.linux": "Linux",
@@ -524,7 +364,7 @@
       "step.1.strong": "Cài ứng dụng.",
       "step.1.p": "Windows: tải file setup (Program Files; hỏi quyền admin; tùy chọn icon desktop). Linux: <code>./installer/install-linux.sh</code>. macOS: <code>./installer/install-macos.sh</code> (.app chưa ký — chuột phải → Open lần đầu).",
       "step.2.strong": "Xác nhận thiết lập lần đầu.",
-      "step.2.p": "Ở lần mở đầu tiên, cửa sổ ứng dụng hiện ra ngay và yêu cầu bạn đồng ý tải FFmpeg cùng bộ PyTorch/tách âm thanh (~1.6&nbsp;GB tổng cộng).",
+      "step.2.p": "Ở lần mở đầu tiên, cửa sổ ứng dụng hiện ra ngay và yêu cầu bạn đồng ý tải FFmpeg cùng bộ PyTorch/tách âm thanh (~1.7&nbsp;GB tổng cộng).",
       "step.3.strong": "Nhập một bản nhạc và tách.",
       "step.3.p": "Các mô hình AI (~500&nbsp;MB) sẽ tự động tải về khi bạn tách lần đầu tiên. Sau đó mọi thứ chạy hoàn toàn offline.",
       "hero.formerly": "Trước đây là SoundRazer Desktop",
@@ -540,87 +380,41 @@
       "reqs.storage": "<strong>Dung lượng:</strong> ~10&nbsp;GB trống (cho dependencies và models)",
       "reqs.cpu": "<strong>CPU:</strong> Bộ xử lý 64-bit hiện đại (khuyến nghị 4+ nhân)",
       "reqs.gpu": "<strong>GPU:</strong> Tùy chọn — CPU vẫn chạy tốt",
-      "footer.p1": "Giấy phép MIT. Thực hiện bởi <a href=\"https://github.com/um1chc5\">um1chc5</a>, dựa trên <a href=\"https://github.com/pedromtcosta/sound-razor\">Sound Razor</a> của pedromtcosta.",
-      "footer.p2": "<a href=\"https://github.com/um1chc5/unweave\">Mã nguồn trên GitHub</a> · <a href=\"https://www.facebook.com/um1chc5/\">Facebook</a> · <a href=\"https://github.com/um1chc5/unweave/releases\">Tất cả bản phát hành</a> · <a href=\"https://github.com/um1chc5/unweave/issues\">Báo lỗi</a>",
-      "coffee.btn": "Mời tôi ly cà phê",
-      "coffee.btnShort": "Cà phê",
-      "coffee.title": "Mời tôi ly cà phê",
-      "coffee.lead": "Nếu Unweave hữu ích với bạn, một ly cà phê giúp dự án tiếp tục. Cảm ơn bạn.",
-      "coffee.hint": "Quét bằng app ngân hàng (VietQR / Napas 247)",
-      "coffee.account": "TK",
-      "coffee.close": "Đóng"
+      "start.guideLink": "Xem hướng dẫn từng bước"
     }
-  };
-
-  var original = {};
-  document.querySelectorAll("[data-i18n]").forEach(function (el) {
-    original[el.getAttribute("data-i18n")] = el.innerHTML;
-  });
-
-  function applyLang(lang) {
-    document.documentElement.lang = lang;
-    document.querySelectorAll("[data-i18n]").forEach(function (el) {
-      var key = el.getAttribute("data-i18n");
-      el.innerHTML = lang === "vi" ? (TRANSLATIONS.vi[key] || original[key]) : original[key];
-    });
-    document.querySelectorAll(".lang-toggle button").forEach(function (btn) {
-      btn.classList.toggle("active", btn.getAttribute("data-lang") === lang);
-    });
-    localStorage.setItem("srLang", lang);
+};
+</script>
+<script src="assets/site.js"></script>
+<script>
+(function loadInstallerInfo() {
+  // Latest release's version and installer size, shown on the download button.
+  var el = document.getElementById("installer-size");
+  var cacheKey = "srInstallerInfo";
+  var cached = null;
+  try { cached = JSON.parse(localStorage.getItem(cacheKey) || "null"); } catch (_) {}
+  var now = Date.now();
+  // Show the last known label (even if stale) so a failed refresh leaves it in place.
+  if (cached && cached.text) el.textContent = cached.text;
+  if (cached && cached.text && now - cached.at < 3600000) return;
+  // After a failure (e.g. 403 rate limit on a shared IP), wait 10 minutes before retrying.
+  if (cached && cached.failedAt && now - cached.failedAt < 600000) return;
+  function markFailed() {
+    var entry = {text: cached && cached.text, at: cached && cached.at, failedAt: Date.now()};
+    try { localStorage.setItem(cacheKey, JSON.stringify(entry)); } catch (_) {}
   }
-
-  document.querySelectorAll(".lang-toggle button").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      applyLang(btn.getAttribute("data-lang"));
-    });
-  });
-
-  var saved = localStorage.getItem("srLang");
-  var initial = saved || (navigator.language && navigator.language.toLowerCase().indexOf("vi") === 0 ? "vi" : "en");
-  applyLang(initial);
-
-  (function coffeeModal() {
-    var dialog = document.getElementById("coffee-dialog");
-    var openBtn = document.getElementById("coffee-open");
-    var closeBtn = document.getElementById("coffee-close");
-    if (!dialog || !openBtn || !closeBtn || typeof dialog.showModal !== "function") return;
-    openBtn.addEventListener("click", function () { dialog.showModal(); });
-    closeBtn.addEventListener("click", function () { dialog.close(); });
-    dialog.addEventListener("click", function (e) {
-      if (e.target === dialog) dialog.close();
-    });
-  })();
-
-  (function loadInstallerInfo() {
-    // Latest release's version and installer size, shown on the download button.
-    var el = document.getElementById("installer-size");
-    var cacheKey = "srInstallerInfo";
-    var cached = null;
-    try { cached = JSON.parse(localStorage.getItem(cacheKey) || "null"); } catch (_) {}
-    var now = Date.now();
-    // Show the last known label (even if stale) so a failed refresh leaves it in place.
-    if (cached && cached.text) el.textContent = cached.text;
-    if (cached && cached.text && now - cached.at < 3600000) return;
-    // After a failure (e.g. 403 rate limit on a shared IP), wait 10 minutes before retrying.
-    if (cached && cached.failedAt && now - cached.failedAt < 600000) return;
-    function markFailed() {
-      var entry = {text: cached && cached.text, at: cached && cached.at, failedAt: Date.now()};
-      try { localStorage.setItem(cacheKey, JSON.stringify(entry)); } catch (_) {}
-    }
-    fetch("https://api.github.com/repos/um1chc5/unweave/releases/latest")
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (data) {
-        var asset = data && data.assets && data.assets.find(function (a) { return a.name === "Unweave-Setup-x64.exe"; });
-        if (!asset) { markFailed(); return; }
-        var mb = asset.size / (1024 * 1024);
-        var size = "~" + (mb < 10 ? mb.toFixed(1) : Math.round(mb)) + " MB";
-        var version = data.tag_name ? data.tag_name.replace(/^v?/, "v") : "";
-        var text = "(" + (version ? version + " · " : "") + size + ")";
-        el.textContent = text;
-        try { localStorage.setItem(cacheKey, JSON.stringify({text: text, at: Date.now()})); } catch (_) {}
-      })
-      .catch(markFailed);
-  })();
+  fetch("https://api.github.com/repos/um1chc5/unweave/releases/latest")
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      var asset = data && data.assets && data.assets.find(function (a) { return a.name === "Unweave-Setup-x64.exe"; });
+      if (!asset) { markFailed(); return; }
+      var mb = asset.size / (1024 * 1024);
+      var size = "~" + (mb < 10 ? mb.toFixed(1) : Math.round(mb)) + " MB";
+      var version = data.tag_name ? data.tag_name.replace(/^v?/, "v") : "";
+      var text = "(" + (version ? version + " · " : "") + size + ")";
+      el.textContent = text;
+      try { localStorage.setItem(cacheKey, JSON.stringify({text: text, at: Date.now()})); } catch (_) {}
+    })
+    .catch(markFailed);
 })();
 </script>
 
