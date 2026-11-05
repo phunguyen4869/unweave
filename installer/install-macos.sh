@@ -110,7 +110,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 APP_SRC="$REPO_ROOT/app"
 PYPROJECT="$REPO_ROOT/pyproject.toml"
-ICON_SRC="$REPO_ROOT/docs/assets/icon-256.png"
+ICON_SRC="$REPO_ROOT/docs/landing-page/assets/icon-256.png"
 
 # Resolve launcher path: prefer an existing install's bin, else DEFAULT_BIN_DIR.
 resolve_bin_dir() {

@@ -113,7 +113,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 APP_SRC="$REPO_ROOT/app"
 PYPROJECT="$REPO_ROOT/pyproject.toml"
-ICON_SRC="$REPO_ROOT/docs/assets/icon-256.png"
+ICON_SRC="$REPO_ROOT/docs/landing-page/assets/icon-256.png"
 
 refresh_desktop_db() {
     command -v update-desktop-database >/dev/null 2>&1 &&
