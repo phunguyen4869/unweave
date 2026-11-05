@@ -23,6 +23,12 @@
   - [09 — Job progress and ETA](specs/09-job-progress.md)
   - [10 — In-app update check](specs/10-updates.md)
 
+## Ideas
+
+Explorations, not commitments. Nothing here is scheduled; if an idea graduates it becomes a numbered spec.
+
+- [ideas/chord-key-lyrics-sheet.md](ideas/chord-key-lyrics-sheet.md) — Chordify-style chord/key detection over existing stems, plus optional lyric alignment
+
 ## Learning
 
 - [learning/notebooklm-pack.md](learning/notebooklm-pack.md) — **All-in-one** NotebookLM source (upload this only, then say `Start tutoring`)
