@@ -3,7 +3,7 @@ import {store, nav} from '../core/store.js';
 import {clearAudio} from '../audio/audio.js';
 import {renderNew, continuePending} from '../views/new.js';
 import {renderLibrary} from '../views/library.js';
-import {renderSong} from '../views/song.js';
+import {renderSong, exportSummary} from '../views/song.js';
 import {renderSetup, renderSetupView, renderSetupBanner} from '../views/setup.js';
 import {refreshSettingsOpen} from '../views/settings.js';
 import {t, onLangChange} from '../core/i18n.js';
@@ -101,10 +101,12 @@ function announceJob(job) {
       return;
     }
     if (job.kind === 'export') {
-      const labels = {flac: 'FLAC', mp3: 'MP3', opus: 'Opus', m4a: 'M4A', wav16: 'WAV', aiff: 'AIFF'};
-      notice(t('nav.exportedNotice', {count: job.stems.length, formats: (job.formats || []).map(f => labels[f] || f).join(', ')}), 'success');
+      // On this song the success dialog says the same thing; a toast only helps elsewhere.
+      const dialogShows = store.exportPending?.jobId === job.id && store.view === 'song' && store.selected === job.project;
+      if (!dialogShows) notice(exportSummary(job), 'success');
       return;
     }
+    store.stemsReady.add(job.project);
     const p = store.state.projects.find(x => x.id === job.project);
     notice(t('nav.songReadyNotice', {title: p?.title || t('nav.defaultSongTitle'), count: job.stems.length}), 'success');
   }

@@ -10,7 +10,7 @@ export const store = {
   songTrimEditor: null, songTrimRange: null, songTrimKey: '',
   songPlanFor: null,
   splitEditor: null, splitRange: null, splitProject: null,
-  exportPending: null, exportOffered: null,
+  exportPending: null, exportOffered: null, stemsReady: new Set(),
   settingsStorage: null, settingsStorageLoaded: false, settingsUpdates: null,
   settingsCleanup: null, settingsCleanupLoaded: false,
   settingsTab: 'general', clearingExports: null,

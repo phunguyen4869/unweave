@@ -63,8 +63,10 @@ rejected alternatives (asking the separator for lossy output, or converting
   - Primary button: **Export**.
 - Export runs as a normal background job (same panel, progress, cancel button,
   log) and can be cancelled.
-- On success: notice “Exported N stems as FLAC, MP3”, and the dialog offers
-  **Open exports folder**.
+- On success: the export dialog stays closed and a separate success dialog says
+  “Exported N stems as FLAC, MP3” and offers **Open exports folder**. If the user
+  has moved to another song, a notice says the same and the dialog waits until
+  they return.
 - Existing exports are replaced per file only after every requested conversion
   succeeds (see §6.3).
 
