@@ -3,11 +3,14 @@
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
+import os
 from pathlib import Path
 import secrets
+import socket
 import subprocess
 import sys
 from urllib.parse import parse_qs, unquote, urlsplit
+from urllib.request import urlopen
 
 from .library import Library
 from .routes import build_router
@@ -97,13 +100,51 @@ def make_server(library: Library, port: int = 8765):
                 print(f"UI request failed: {error}", file=sys.stderr)
                 self.respond(500, {"error": "Unexpected server error; see the terminal."})
 
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = LocalServer(("127.0.0.1", port), Handler)
     server.daemon_threads = True
     return server
 
 
+class LocalServer(ThreadingHTTPServer):
+    """Binds its port exclusively. On Windows, SO_REUSEADDR (which HTTPServer sets) lets
+    a socket bind a port another program already listens on, so the window could end
+    up talking to that program; the exclusive flag makes the bind fail instead."""
+    allow_reuse_address = os.name != "nt"
+
+    def server_bind(self):
+        if os.name == "nt":
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
+# Ports tried after the requested one before asking the OS for any free port. The page
+# keeps its theme and language in localStorage, which is per port, so staying on the
+# requested port whenever it is free keeps those settings.
+PORT_ATTEMPTS = 20
+
+
+def bind_server(library: Library, port: int):
+    """make_server() on `port`, or the next free port when another program holds it."""
+    error = None
+    for candidate in (*range(port, port + PORT_ATTEMPTS), 0):
+        try:
+            return make_server(library, candidate)
+        except OSError as caught:
+            error = caught
+    raise error
+
+
+def running_unweave(port: int, timeout: float = 2.0) -> bool:
+    """Whether the server on `port` is Unweave's own, from another launch of the app."""
+    try:
+        with urlopen(f"http://127.0.0.1:{port}/", timeout=timeout) as response:
+            return response.status == 200 and b"<title>Unweave</title>" in response.read(4096)
+    except (OSError, ValueError):
+        return False
+
+
 def serve(projects: Path | None, port: int, cache: Path, window=None, config: Path | None = None,
-          default_root: Path | None = None):
+          default_root: Path | None = None, on_ready=None):
     if not ensure_ffmpeg_on_path():
         print(MISSING_FFMPEG, file=sys.stderr, flush=True)
     # Callers running from an installed, read-only location (Program Files) must pass
@@ -113,8 +154,13 @@ def serve(projects: Path | None, port: int, cache: Path, window=None, config: Pa
     config = config if config is not None else Path(".sound-razor/ui.json")
     default_root = default_root if default_root is not None else Path("output")
     library = Library(projects, config, cache, default_root, window=window)
-    server = make_server(library, port)
+    server = bind_server(library, port)
+    if server.server_port != port:
+        print(f"Port {port} is in use by another program; using {server.server_port}.", flush=True)
     print(f"Unweave UI: http://127.0.0.1:{server.server_port}", flush=True)
+    if on_ready is not None:
+        # The socket is already listening, so the window can connect from here on.
+        on_ready(server.server_port)
     print("Open that address in your browser. Stop the server with Ctrl+C.", flush=True)
     try:
         server.serve_forever()

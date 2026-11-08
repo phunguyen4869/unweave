@@ -10,7 +10,7 @@ export const STEM_LABEL_KEYS = {vocals: 'stem.vocals', drums: 'stem.drums', bass
 export const LEAVES = [['lead', 'stem.lead', '#4fe0a8'], ['rhythm', 'stem.rhythm', '#7ef0c6']];
 export const PLAN_META = Object.fromEntries(
   [...STEMS, ...LEAVES].map(([id, key, color]) => [id, {key, color}]));
-export const DEFAULT_STEMS = ['vocals', 'drums', 'bass', 'guitar'];
+export const DEFAULT_STEMS = ['vocals', 'drums', 'bass', 'guitar', 'piano', 'other'];
 export const AUDIO_EXTENSIONS = ['.wav', '.flac', '.mp3', '.opus', '.ogg', '.m4a', '.aac', '.aiff', '.aif'];
 export const SEPARATION_STEPS = [['prepare', 'step.separation.prepare'], ['load', 'step.separation.load'], ['separate', 'step.separation.separate'], ['finalize', 'step.separation.finalize']];
 // A separation that also splits the guitar runs a second, much slower model after the

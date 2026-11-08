@@ -39,6 +39,8 @@ def parser() -> argparse.ArgumentParser:
     guitar.add_argument("--start", type=float, help="Start of the section in seconds (requires --end)")
     guitar.add_argument("--end", type=float, help="End of the section in seconds (requires --start)")
     guitar.add_argument("--cache", type=Path, default=Path(".sound-razor/models"))
+    guitar.add_argument("--replace-source", action="store_true",
+                        help="Remove the guitar stem after a whole split, or mute the split section in it (it must be in --output)")
     export = commands.add_parser("export", help="Copy project stems into other formats")
     export.add_argument("--project", type=Path, required=True)
     export.add_argument("--formats", nargs="+", choices=tuple(FORMATS), default=["flac"])
@@ -62,7 +64,7 @@ def main(argv: list[str] | None = None) -> int:
         trim = (args.start, args.end) if getattr(args, "start", None) is not None else None
         if args.command == "split-guitar":
             from .audio.guitar_split import split_guitar
-            result = [str(path) for path in split_guitar(args.file, args.output, args.cache, trim)]
+            result = [str(path) for path in split_guitar(args.file, args.output, args.cache, trim, args.replace_source)]
         elif args.command == "export":
             from .audio.exports import export_stems
             from .projects import describe_project

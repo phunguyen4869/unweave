@@ -3,6 +3,7 @@ import sys
 import os
 import threading
 import time
+import traceback
 import webbrowser
 from pathlib import Path
 
@@ -187,12 +188,57 @@ def _run_in_browser(url: str) -> None:
         pass
 
 
+def start_server(port: int, controls, timeout: float = 60) -> int | None:
+    """Run the UI server on a background thread and return its port once it listens,
+    or None if it failed to start. It moves to another port when a different program
+    holds `port`; opening the window without waiting showed that program's page."""
+    from unweave.webui import serve
+
+    dirs = writable_dirs()
+    ready = threading.Event()
+    started = {}
+
+    def on_ready(actual):
+        started["port"] = actual
+        ready.set()
+
+    def run_server():
+        try:
+            serve(None, port, dirs["cache"], window=controls, config=dirs["config"],
+                  default_root=dirs["default_root"], on_ready=on_ready)
+        except BaseException:
+            traceback.print_exc()
+        finally:
+            ready.set()
+
+    threading.Thread(target=run_server, daemon=True).start()
+    ready.wait(timeout)
+    return started.get("port")
+
+
+START_ERROR = ("Unweave could not start its local server. Close Unweave and open it again. "
+               "If this keeps happening, send the file launch.log from the Unweave folder in "
+               "%LOCALAPPDATA% with your report.")
+
+
+def show_start_error(use_native: bool) -> None:
+    print(START_ERROR, file=sys.stderr, flush=True)
+    if not use_native:
+        return
+    webview.create_window(
+        title="Unweave",
+        html=("<body style='font:15px system-ui,sans-serif;background:#0b0c0f;color:#e8e8ea;"
+              f"padding:28px;line-height:1.5'><h2 style='margin-top:0'>Unweave</h2><p>{START_ERROR}</p></body>"),
+        width=560, height=280, resizable=False,
+    )
+    webview.start(icon=app_icon())
+
+
 def main():
     host = "127.0.0.1"
     port = 8765
 
-    # Use the CLI to start the UI server
-    from unweave.webui import serve
+    from unweave.webui.server import running_unweave
 
     force_browser = prefer_browser()
     # Created before the window exists and handed straight to serve(): it's only ever
@@ -201,16 +247,15 @@ def main():
     use_native = webview is not None and not force_browser
     controls = WindowControls() if use_native else None
 
-    dirs = writable_dirs()
-
-    def run_server():
-        serve(None, port, dirs["cache"], window=controls, config=dirs["config"], default_root=dirs["default_root"])
-
-    server_thread = threading.Thread(target=run_server, daemon=True)
-    server_thread.start()
-
-    # Give server time to start
-    time.sleep(2)
+    if running_unweave(port):
+        # A second launch: share the first one's server rather than run two servers
+        # that would both write to the same library.
+        print(f"Unweave is already running on port {port}; opening it.", flush=True)
+    else:
+        port = start_server(port, controls)
+        if port is None:
+            show_start_error(use_native)
+            return
 
     url = f"http://{host}:{port}"
 

@@ -87,6 +87,6 @@ unweave/
 - Model weights download on first use (~425 MB total) and are cached in
   `.sound-razor/models/`, verified against a pinned SHA-256.
 - Inference only — nothing is trained locally.
-- The server binds to loopback only (127.0.0.1:8765) and requires a per-session token.
+- The server binds to loopback only (127.0.0.1:8765, or the next free port when another program holds it) and requires a per-session token.
 - Canonical stems are FLAC; export can produce FLAC, MP3, Opus, M4A, WAV or AIFF.
 - No cloud, no API keys, no telemetry.

@@ -164,9 +164,13 @@ def describe_project(path: Path) -> dict:
             if ext not in (".wav", ".flac") or not p.is_file() or p.is_symlink():
                 continue
             # Skip guitar.wav/guitar.flac when superseded by lead+rhythm or by split targets.
+            # A section split now mutes that section in the guitar instead, so the muted
+            # guitar stays on screen next to lead and rhythm. Older splits left the guitar
+            # whole, and showing it would play the section twice.
             if stem_name == 'guitar':
                 superseded = False
-                if separation.get('lead_rhythm_split'):
+                lead_rhythm = separation.get('lead_rhythm_split')
+                if lead_rhythm and not (isinstance(lead_rhythm, dict) and lead_rhythm.get('guitar') == 'muted'):
                     lead_exists = any((stems_dir / f"lead{e}").is_file() for e in (".wav", ".flac"))
                     rhythm_exists = any((stems_dir / f"rhythm{e}").is_file() for e in (".wav", ".flac"))
                     if lead_exists and rhythm_exists:

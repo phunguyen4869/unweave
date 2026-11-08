@@ -58,7 +58,7 @@ A project is a directory containing the original source, generated stems, and JS
 2. FFmpeg normalizes model input to stereo 44.1 kHz WAV.
 3. Select a separation model based on the requested preset/stems. Demucs, MDX/ONNX, and RoFormer model files are cached and downloaded lazily when first required.
 4. Run local inference and validate outputs. Selected stems are written; unselected parts are folded into `other` where applicable.
-5. Optionally run the guitar lead/rhythm splitter on `guitar.wav`. The source guitar stem remains available.
+5. Optionally run the guitar lead/rhythm splitter on `guitar.wav`. Rhythm is written as guitar minus lead, so the pair adds back up to what was split. A split of the whole guitar stem removes it (as does a separation that also splits the guitar, when lead and rhythm are files of their own). A section split mutes that section in the guitar stem, with fades that mirror the 5 ms fades on the section, so guitar, lead and rhythm together play back as the original guitar; `separation.json` records this as `lead_rhythm_split.guitar: "muted"`, and the muted guitar stays listed. Splits made before this keep a whole guitar stem, which stays hidden.
 
 FFmpeg is used for normalization, section trimming, export conversion, and media operations. The model cache tracks download/checksum state. See specs 02 and 03 for trimming and export behavior.
 
