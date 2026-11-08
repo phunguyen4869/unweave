@@ -324,7 +324,9 @@ class JobQueueMixin:
                "pass_count": 2 if split_leaves else 1, "pass_index": 1,
                "_project": project, "_original": info["original"],
                "_stems": chosen, "_group": chosen_group,
-               "_split_leaves": bool(split_leaves), "_trim": saved_trim, "_disk_need": disk_need}
+               "_split_leaves": bool(split_leaves), "_trim": saved_trim, "_disk_need": disk_need,
+               # A split-only job updates the guitar stem itself (--replace-source).
+               "_replace_guitar": bool(split_leaves)}
         return self._enqueue(job)
 
     def _seconds(self, project, info, guitar_split, trim) -> float:
@@ -507,6 +509,8 @@ class JobQueueMixin:
                     job_logs.append(message)
                     raise RuntimeError(message)
                 self._expect_outputs(stage, stems, group)
+                if job.get("_replace_guitar"):
+                    self._drop_split_guitar(stage)
                 # Publish only a successful run; preserve the old stems on failure.
                 with self.lock:
                     if job["status"] == "cancelling":
@@ -548,7 +552,7 @@ class JobQueueMixin:
             shutil.copytree(project / 'stems', stage)
             return [*python, '-m', 'unweave', 'split-guitar',
                     '--file', str(stage / stem_file(stage, 'guitar')), '--output', str(stage),
-                    '--cache', str(self.cache), *range_args]
+                    '--cache', str(self.cache), '--replace-source', *range_args]
         command = [*python, "-m", "unweave", "separate", "--file", str(project / original),
                    "--output", str(stage), "--cache", str(self.cache)]
         if group is not None:
@@ -562,6 +566,17 @@ class JobQueueMixin:
         if split_leaves:
             command += ["--split-guitar"]
         return command + range_args
+
+    @staticmethod
+    def _drop_split_guitar(stage: Path):
+        """Remove the guitar stem once lead and rhythm replace it, after a separation that
+        also split the guitar (always the whole of it). The split writes rhythm as guitar
+        minus lead, so the pair adds back up to the guitar. Leaves folded into other.flac
+        do not replace it."""
+        if not all(stem_file(stage, name) for name in ('lead', 'rhythm')):
+            return
+        for extension in ('.flac', '.wav'):
+            (stage / f'guitar{extension}').unlink(missing_ok=True)
 
     def _expect_outputs(self, stage: Path, stems: list[str], group):
         """A merged stem must NOT reach the stage: only own files and other.flac do."""

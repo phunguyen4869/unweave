@@ -166,24 +166,28 @@ export async function loadAudio(project) {
     $('audio-status').append(retry);
   }
 }
-export function drawWave(canvas, buffer, color, start = 0, length = null) {
+// Draws the buffer on the player's timeline: `offset` is where it starts on that
+// timeline, `bufferOffset` where in the buffer playback starts, and `timeline` the
+// timeline's length. Stretches outside the buffer (a section split's lead and rhythm
+// before and after their section) draw as a flat line.
+export function drawWave(canvas, buffer, color, {offset = 0, bufferOffset = 0, timeline = null} = {}) {
   const width = Math.max(150, canvas.clientWidth);
   const scale = window.devicePixelRatio || 1;
   canvas.width = width * scale; canvas.height = 48 * scale;
   const context = canvas.getContext('2d'); context.scale(scale, scale);
   const data = buffer.getChannelData(0);
   const columns = Math.floor(width / 3);
-  const from = Math.max(0, Math.floor(start * buffer.sampleRate));
-  const to = Math.min(data.length, Math.floor((start + (length ?? buffer.duration)) * buffer.sampleRate));
-  const span = Math.max(1, to - from);
-  const stride = Math.max(1, Math.floor(span / columns));
+  const length = timeline > 0 ? timeline : Math.max(0, buffer.duration - bufferOffset) + offset;
+  const column = length / columns;
+  const sample = time => Math.floor((time - offset + bufferOffset) * buffer.sampleRate);
   context.fillStyle = color;
   for (let i = 0; i < columns; i++) {
+    const from = Math.max(0, sample(i * column));
+    const end = Math.min(data.length, sample((i + 1) * column));
     let peak = 0;
     // Real samples, bounded work even on a full-length song.
-    const skip = Math.max(1, Math.floor(stride / 64));
-    const end = Math.min(from + (i + 1) * stride, to);
-    for (let j = from + i * stride; j < end; j += skip) peak = Math.max(peak, Math.abs(data[j]));
+    const skip = Math.max(1, Math.floor((end - from) / 64));
+    for (let j = from; j < end; j += skip) peak = Math.max(peak, Math.abs(data[j]));
     const height = Math.max(2, Math.min(46, peak * 60));
     context.fillRect(i * 3, (48 - height) / 2, 2, height);
   }
@@ -197,7 +201,9 @@ export function renderTracks() {
     const row = el('div', isOriginal ? 'track track-original' : 'track'); row.style.setProperty('--track-color', color);
     const label = el('div'); label.append(el('div', 'track-name', track.name[0].toUpperCase() + track.name.slice(1)),
       el('div', 'track-detail', `${track.buffer.numberOfChannels === 1 ? 'MONO' : 'STEREO'} · ${time(track.buffer.duration)}`));
-    if (!isOriginal && stemName === 'guitar') {
+    // After a section split the muted guitar stays listed, but it cannot be split again.
+    const alreadySplit = player.tracks.some(other => /^lead\.(flac|wav)$/i.test(other.file));
+    if (!isOriginal && stemName === 'guitar' && !alreadySplit) {
       const split = el('button', 'split-guitar');
       split.type = 'button'; split.title = t('audio.splitGuitarTitle');
       split.setAttribute('aria-label', t('audio.splitGuitarTitle'));
@@ -227,8 +233,8 @@ export function renderTracks() {
     const value = el('span', 'volume-value', `${Math.round(track.volume * 100)}%`);
     range.oninput = () => { track.volume = Number(range.value); value.textContent = `${Math.round(track.volume * 100)}%`; player.updateMix(); };
     controls.append(range, value); row.append(label, wave, controls); $('tracks').append(row);
-    drawWave(canvas, track.buffer, color, track.bufferOffset || 0,
-      track.file === ORIGINAL_FILE ? player.duration : null);
+    drawWave(canvas, track.buffer, color,
+      {offset: track.offset || 0, bufferOffset: track.bufferOffset || 0, timeline: player.duration});
   }
   syncTrackControls();
 }

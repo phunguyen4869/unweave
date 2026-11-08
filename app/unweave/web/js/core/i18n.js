@@ -456,7 +456,7 @@ const STRINGS = {
   'dialog.delete.keepIt': {en: 'Keep it', vi: 'Giữ lại'},
   'dialog.delete.deletePermanently': {en: 'Delete permanently', vi: 'Xóa vĩnh viễn'},
   'dialog.split.title': {en: 'Split guitar', vi: 'Tách guitar'},
-  'dialog.split.sub': {en: 'Choose a section of the guitar track for the lead and rhythm split. The guitar stem itself is not changed.', vi: 'Chọn một đoạn của track guitar để tách lead và rhythm. Track guitar gốc không bị thay đổi.'},
+  'dialog.split.sub': {en: 'Choose a section of the guitar track for the lead and rhythm split. Splitting the whole track replaces the guitar stem with lead and rhythm. Splitting a section mutes that section in the guitar stem, so the three tracks play back as the original.', vi: 'Chọn một đoạn của track guitar để tách lead và rhythm. Tách cả bài thì lead và rhythm thay cho track guitar gốc. Tách một đoạn thì đoạn đó trong track guitar được tắt tiếng, để ba track phát lại đúng như bản gốc.'},
   'dialog.split.submit': {en: 'Split into lead &amp; rhythm', vi: 'Tách thành lead & rhythm'},
   'dialog.export.title': {en: 'Export stems', vi: 'Xuất track'},
   'dialog.export.sub': {en: "Copies are written to this song's <code>exports</code> folder; existing files of the same name are replaced.", vi: 'Bản sao được ghi vào thư mục <code>exports</code> của bài hát này; tệp trùng tên sẽ bị ghi đè.'},
@@ -472,7 +472,7 @@ const STRINGS = {
   'folders.noSubfolders': {en: 'No subfolders. You can select this folder.', vi: 'Không có thư mục con. Bạn có thể chọn thư mục này.'},
   'folders.savingDefault': {en: 'Saving to the default output folder.', vi: 'Đang lưu vào thư mục mặc định.'},
 
-  'split.hint': {en: 'Times are shown in project time. The guitar stem itself is not changed.', vi: 'Thời gian hiển thị theo thời gian dự án. Track guitar gốc không bị thay đổi.'},
+  'split.hint': {en: 'Times are shown in project time. Splitting the whole track replaces the guitar stem with lead and rhythm. Splitting a section mutes that section in the guitar stem, so the three tracks play back as the original.', vi: 'Thời gian hiển thị theo thời gian dự án. Tách cả bài thì lead và rhythm thay cho track guitar gốc. Tách một đoạn thì đoạn đó trong track guitar được tắt tiếng, để ba track phát lại đúng như bản gốc.'},
 
   'new.notSupportedFile': {en: '{filename} is not a supported audio file.', vi: '{filename} không phải định dạng âm thanh được hỗ trợ.'},
   'new.trim.readingDuration': {en: 'Reading the duration… You can still separate the full file.', vi: 'Đang đọc thời lượng… Bạn vẫn có thể tách toàn bộ tệp.'},
