@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How to use Unweave — Step-by-step guide</title>
+<meta name="description" content="An animated walkthrough of Unweave: install the app, add a song, choose stems, practise in the mixer and get your stem files." />
+<link rel="icon" href="assets/icon-256.png" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="How to use Unweave" />
+<meta property="og:description" content="An animated walkthrough: install the app, add a song, choose stems, practise in the mixer and get your stem files." />
+<meta property="og:url" content="https://um1chc5.github.io/unweave/landing-page/guide.html" />
+<meta property="og:image" content="https://um1chc5.github.io/unweave/landing-page/assets/og-image.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/site.css" />
+<link rel="stylesheet" href="assets/guide.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap site-header-inner">
+    <a class="site-brand" href="./"><img src="assets/icon-256.png" alt="" /><span>Unweave</span></a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="./" data-i18n="nav.home">Home</a>
+      <a href="guide.html" aria-current="page" data-i18n="nav.guide">Guide</a>
+    </nav>
+    <div class="site-actions">
+      <button type="button" class="coffee-btn" id="coffee-open" aria-haspopup="dialog" aria-controls="coffee-dialog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v7a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><path d="M6 2v2M10 2v2M14 2v2"/></svg>
+        <span class="coffee-label-long" data-i18n="coffee.btn">Buy me a coffee</span>
+        <span class="coffee-label-short" data-i18n="coffee.btnShort">Coffee</span>
+      </button>
+      <div class="lang-toggle">
+        <button type="button" data-lang="en">EN</button>
+        <button type="button" data-lang="vi">VI</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<dialog id="coffee-dialog" class="coffee-dialog" aria-labelledby="coffee-title">
+  <div class="coffee-dialog-inner">
+    <h2 id="coffee-title" data-i18n="coffee.title">Buy me a coffee</h2>
+    <p class="coffee-lead" data-i18n="coffee.lead">If Unweave helped you out, a coffee keeps the project going. Thank you.</p>
+    <img class="coffee-qr" src="assets/vietqr-donate.jpg" width="280" height="492" alt="VietQR donation code for VU VUONG AN, VietinBank" />
+    <p class="coffee-hint" data-i18n="coffee.hint">Scan with your banking app (VietQR / Napas 247)</p>
+    <p class="coffee-account">
+      <strong>VU VUONG AN</strong><br />
+      VietinBank · <span data-i18n="coffee.account">Account</span> 101868687524
+    </p>
+    <button type="button" class="coffee-close" id="coffee-close" data-i18n="coffee.close">Close</button>
+  </div>
+</dialog>
+
+<main id="guide" class="wrap">
+  <div class="guide-head">
+    <h1 data-i18n="guide.h1">How to use Unweave</h1>
+    <p data-i18n="guide.lead">Choose a topic. Each one plays by itself, or you can use Back and Next.</p>
+  </div>
+
+  <div class="guide-layout">
+    <nav class="guide-sidebar" aria-label="Guides">
+      <ol class="guide-scenarios">
+        <li data-scenario="basic">
+          <a class="scenario-link" href="#basic" data-i18n="sc.basic">Basic flow</a>
+          <ol class="guide-chapters">
+            <li><button type="button" class="chapter-btn"><strong data-i18n="basic.1.t">Install and set up</strong><span data-i18n="basic.1.p">Run the installer and open Unweave. The first launch lists what it needs to download (~1.7 GB). Click Download &amp; install once; YouTube import is optional.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="basic.2.t">Add a song</strong><span data-i18n="basic.2.p">On the Separate page, drop an audio file on the box or click browse. WAV, MP3, FLAC, M4A, OGG, AAC and AIFF all work.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="basic.3.t">Choose your stems</strong><span data-i18n="basic.3.p">All six stems are selected, so you can usually leave this as it is. Untick one and its sound moves into Other, as long as Other stays ticked. Then click Start separation.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="basic.4.t">Wait for the separation</strong><span data-i18n="basic.4.p">Everything runs on your computer and nothing is uploaded. The first run also downloads the AI models (~500 MB); later runs start right away.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="basic.5.t">Listen to the result</strong><span data-i18n="basic.5.p">The song has a mixer with one row per stem. Press play to hear it. “Practise a song” shows what else the mixer can do.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="basic.6.t">Get your stem files</strong><span data-i18n="basic.6.p">Your stems are already saved. Click Open folder and look inside <code>stems</code> for the FLAC files. You don’t need to export.</span></button></li>
+          </ol>
+        </li>
+        <li data-scenario="advanced">
+          <a class="scenario-link" href="#advanced" data-i18n="sc.advanced">Advanced options</a>
+          <ol class="guide-chapters">
+            <li><button type="button" class="chapter-btn"><strong data-i18n="advanced.1.t">Separate one section</strong><span data-i18n="advanced.1.p">After adding a file, drag the Section handles to separate only part of the song.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="advanced.2.t">Merge stems with a plan</strong><span data-i18n="advanced.2.p">Click Advanced plan…, then → other on a stem to mix it into <code>other.flac</code> instead of giving it its own file. Click Use this plan, then start as usual.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="advanced.3.t">Split guitar in the plan</strong><span data-i18n="advanced.3.p">In Advanced plan…, click Split on Guitar to get Lead and Rhythm in the same run. Click Use this plan, then start as usual. This takes about 10× longer, so a short section saves time.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="advanced.4.t">Split guitar after separating</strong><span data-i18n="advanced.4.p">Already separated the song? In the mixer, click the split icon next to Guitar and choose a section. This is much slower than a normal separation, so a short section saves time.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="advanced.5.t">Queue more songs</strong><span data-i18n="advanced.5.p">While one song runs, the button becomes Add to queue. Click the job indicator at the top to see, open or cancel jobs.</span></button></li>
+          </ol>
+        </li>
+        <li data-scenario="youtube">
+          <a class="scenario-link" href="#youtube" data-i18n="sc.youtube">Use a YouTube link</a>
+          <ol class="guide-chapters">
+            <li><button type="button" class="chapter-btn"><strong data-i18n="youtube.1.t">Paste the link</strong><span data-i18n="youtube.1.p">Switch to YouTube, paste the link and click Download song. If you skipped YouTube support during setup, the app offers it here as a small download (~15 MB). Only download videos you have the right to use.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="youtube.2.t">Trim a section</strong><span data-i18n="youtube.2.p">With the trim option ticked, the song waits for you after the download. Drag the handles to keep one section, or leave them to use the whole song.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="youtube.3.t">Start the separation</strong><span data-i18n="youtube.3.p">Click Start separation. Only the section you kept is separated, and from here it works like any other song.</span></button></li>
+          </ol>
+        </li>
+        <li data-scenario="practise">
+          <a class="scenario-link" href="#practise" data-i18n="sc.practise">Practise a song</a>
+          <ol class="guide-chapters">
+            <li><button type="button" class="chapter-btn"><strong data-i18n="practise.1.t">Hear one stem alone</strong><span data-i18n="practise.1.p">Press play, then click S on a stem to hear only that stem. Click S again to bring the others back.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="practise.2.t">Mute a stem</strong><span data-i18n="practise.2.p">Click M to take one stem out of the mix, for example the drums if you want to play that part yourself.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="practise.3.t">Slow it down</strong><span data-i18n="practise.3.p">Drag Speed down, as low as 50%. The song gets slower without changing its pitch.</span></button></li>
+          </ol>
+        </li>
+        <li data-scenario="export">
+          <a class="scenario-link" href="#export" data-i18n="sc.export">Export other formats</a>
+          <ol class="guide-chapters">
+            <li><button type="button" class="chapter-btn"><strong data-i18n="export.1.t">Choose formats and stems</strong><span data-i18n="export.1.p">Need MP3 or WAV? Click Export, then tick the formats and stems you want. You can skip this if FLAC is fine, because those files are already in <code>stems</code>.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="export.2.t">Wait for the export</strong><span data-i18n="export.2.p">Unweave converts copies of your stems. The files in <code>stems</code> stay as they are.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="export.3.t">Open the exports folder</strong><span data-i18n="export.3.p">When it finishes, click Open exports folder. Exporting the same format again replaces those files.</span></button></li>
+          </ol>
+        </li>
+        <li data-scenario="trouble">
+          <a class="scenario-link" href="#trouble" data-i18n="sc.trouble">When something goes wrong</a>
+          <ol class="guide-chapters">
+            <li><button type="button" class="chapter-btn"><strong data-i18n="trouble.1.t">Copy the error report</strong><span data-i18n="trouble.1.p">If a job fails, click Copy error report. It copies the details needed to find the problem.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="trouble.2.t">Send it on Facebook</strong><span data-i18n="trouble.2.p">Click Send error via author’s Facebook and paste the report into a message. This is the best way to reach the author.</span></button></li>
+            <li><button type="button" class="chapter-btn"><strong data-i18n="trouble.3.t">No sound on Linux</strong><span data-i18n="trouble.3.p">If playback is silent in the Linux window, click Open in browser on the banner. The same app opens in your browser instead.</span></button></li>
+          </ol>
+        </li>
+      </ol>
+    </nav>
+    <div class="guide-player">
+      <div id="guide-stage" class="guide-stage" role="img" aria-label="Animated demonstration of the Unweave app. Each step is described in the list of steps.">
+        <div class="ua" aria-hidden="true">
+          <div class="ua-title"><i></i><span data-u="win-title" data-blank="Unweave">Unweave</span><em>–□×</em></div>
+          <div class="ua-appbar">
+            <div class="ua-tabs">
+              <span class="ua-tab on" data-u="tab-new" data-i18n="ui.separate">Separate</span>
+              <span class="ua-tab" data-u="tab-lib"><span data-i18n="ui.library">Library</span><b>1</b></span>
+            </div>
+            <div class="ua-pill" data-u="pill"><span class="ua-swap" data-u="pill-what"><span class="on" data-i18n="ui.pill">Separating</span><span data-i18n="ui.pillSplit">Splitting guitar</span></span> · <span data-u="pill-pct" data-blank="0%">0%</span><span class="ua-pill-wait" data-u="pill-wait"> • <span data-i18n="ui.pillWait">1 waiting</span></span></div>
+          </div>
+
+          <div class="ua-body">
+            <!-- first-run setup -->
+            <section class="ua-screen" data-u="setup">
+              <p class="ua-page" data-i18n="ui.setup.title">Set up Unweave</p>
+              <p class="ua-sub" data-i18n="ui.setup.sub">A few things need to download before you can separate tracks. Everything after this is 100% local — no account, no telemetry, no re-asking.</p>
+              <div class="ua-tiles">
+                <div class="ua-card ua-tile" data-u="tile-ffmpeg">
+                  <div class="ua-chip"><span class="c-idle" data-i18n="ui.chip.required">Required</span><span class="c-run" data-i18n="ui.chip.installing">Installing</span><span class="c-done" data-i18n="ui.chip.installed">✓ Installed</span></div>
+                  <strong>FFmpeg</strong>
+                  <p data-i18n="ui.setup.ffmpeg">Reads, converts and exports audio in every common format.</p>
+                  <small>~100 MB</small><span class="ua-track"><i></i></span>
+                </div>
+                <div class="ua-card ua-tile" data-u="tile-separation">
+                  <div class="ua-chip"><span class="c-idle" data-i18n="ui.chip.required">Required</span><span class="c-run" data-i18n="ui.chip.installing">Installing</span><span class="c-done" data-i18n="ui.chip.installed">✓ Installed</span></div>
+                  <strong data-i18n="ui.setup.engine">Separation engine</strong>
+                  <p data-i18n="ui.setup.engineDesc">PyTorch and the AI libraries that split songs into stems.</p>
+                  <small>~1.6 GB</small><span class="ua-track"><i></i></span>
+                </div>
+                <div class="ua-card ua-tile">
+                  <div class="ua-chip"><span class="c-idle" data-i18n="ui.chip.optional">Optional</span></div>
+                  <strong data-i18n="ui.setup.yt">YouTube import</strong>
+                  <p data-i18n="ui.setup.ytDesc">Pull a song’s audio straight from a YouTube link (yt-dlp).</p>
+                  <small>~15 MB</small><span class="ua-track"></span>
+                </div>
+              </div>
+              <div class="ua-card ua-setup-foot">
+                <div><strong><span data-i18n="ui.setup.total">Total download:</span> ~1.7 GB</strong><p class="ua-hint" data-i18n="ui.setup.note">Saved in your app data folder. AI models (~500 MB) download the first time you separate a song.</p></div>
+                <div><span class="ua-btn" data-i18n="ui.setup.later">Not now</span><span class="ua-btn primary" data-u="setup-start" data-i18n="ui.setup.install">Download &amp; install</span></div>
+              </div>
+            </section>
+
+            <!-- new separation -->
+            <section class="ua-screen ua-new" data-u="new">
+              <p class="ua-page" data-i18n="ui.new.title">Separate a song</p>
+              <p class="ua-sub" data-i18n="ui.new.sub">Pick a track, choose the stems you want, and Unweave splits it on this computer. Nothing is uploaded anywhere.</p>
+              <div class="ua-new-grid">
+                <div class="ua-card">
+                  <div class="ua-step"><i>1</i><h3 data-i18n="ui.new.choose">Choose audio</h3>
+                    <div class="ua-seg"><span class="on s-file" data-i18n="ui.new.file">File</span><span class="s-yt" data-u="src-yt">YouTube</span></div>
+                  </div>
+                  <div class="ua-drop" data-u="drop">
+                    <i>♫</i>
+                    <strong data-i18n="ui.new.drop">Drop a song here, or <u>browse</u></strong>
+                    <small>WAV · MP3 · FLAC · M4A · OGG · AAC · AIFF</small>
+                  </div>
+                  <div class="ua-file ua-file-main" data-u="file"><i>♪</i><div><strong data-u="file-name" data-blank="My Song.mp3">My Song.mp3</strong><small>3:34 · 8.2 MB</small></div></div>
+                  <div class="ua-yt">
+                    <div class="ua-field"><span data-i18n="ui.new.ytLabel">YouTube link</span><span class="ua-input" data-u="url" data-blank=""></span></div>
+                    <div class="ua-check" data-u="trim-first"><span data-i18n="ui.new.trimFirst">Let me trim the song before separating</span></div>
+                    <div class="ua-dl"><small data-i18n="ui.new.downloading">Downloading from YouTube</small><span class="ua-track"><i data-u="dl-bar"></i></span></div>
+                  </div>
+                  <div class="ua-trim" data-u="trim">
+                    <h4><span data-i18n="ui.new.section">Section</span><em data-i18n="ui.optional">optional</em></h4>
+                    <div class="ua-trimwave">
+                      <div class="ua-wave c-other"></div>
+                      <div class="ua-trimsel" data-u="trim-sel"></div>
+                      <div class="ua-handle" data-u="trim-start"></div>
+                      <div class="ua-handle end" data-u="trim-end"></div>
+                    </div>
+                  </div>
+                  <div class="ua-details">› <span data-i18n="ui.new.details">Song details</span><em data-i18n="ui.optional">optional</em></div>
+                </div>
+                <div class="ua-card">
+                  <div class="ua-step"><i>2</i><h3 data-i18n="ui.new.stems">Stems to extract</h3></div>
+                  <div class="ua-presets">
+                    <div class="ua-preset on"><strong data-i18n="ui.new.custom">Instruments</strong><small data-i18n="ui.new.customSub">Pick individual stems</small></div>
+                    <div class="ua-preset"><strong data-i18n="ui.new.vocals">Vocals + Instrumental</strong><small data-i18n="ui.new.vocalsSub">Two-track split (karaoke)</small></div>
+                  </div>
+                  <div class="ua-grid" data-u="grid">
+                    <div class="ua-stem c-vocals" data-i18n="ui.vocals">Vocals</div>
+                    <div class="ua-stem c-drums" data-i18n="ui.drums">Drums</div>
+                    <div class="ua-stem c-bass">Bass</div>
+                    <div class="ua-stem c-guitar">Guitar</div>
+                    <div class="ua-stem c-piano" data-u="stem-piano">Piano</div>
+                    <div class="ua-stem c-other" data-i18n="ui.other">Other</div>
+                  </div>
+                  <p class="ua-hint ua-grid-hint" data-i18n="ui.new.hint">Unselected instruments are dropped. Tick “Other” to keep everything left over in one track.</p>
+                  <div class="ua-plan-open"><span class="ua-btn" data-u="plan-open" data-i18n="ui.plan.open">Advanced plan…</span></div>
+                  <div class="ua-plan-summary"><span class="ua-swap" data-u="plan-summary"><span class="on" data-i18n="ui.plan.summary">Advanced plan · 4 own · 2 in other.flac</span><span data-i18n="ui.plan.summary2">Advanced plan · 7 own · 1 in other.flac</span></span><span class="ua-btn" data-i18n="ui.plan.edit">Edit plan</span></div>
+                  <div class="ua-step"><i>3</i><h3 data-i18n="ui.new.save">Save to</h3></div>
+                  <div class="ua-output">Music/Unweave/<span class="ua-btn" data-i18n="ui.new.change">Change</span></div>
+                  <div class="ua-btn primary ua-start" data-u="start"><span class="st-go" data-i18n="ui.new.start">Start separation</span><span class="st-yt" data-i18n="ui.new.download">Download song</span><span class="st-q" data-i18n="ui.new.queue">Add to queue</span></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- separation progress -->
+            <section class="ua-screen" data-u="progress">
+              <div class="ua-progress">
+                <div class="ua-ring">
+                  <svg viewBox="0 0 168 168"><circle cx="84" cy="84" r="76" fill="none" stroke="#232831" stroke-width="10" /><circle data-u="ring" cx="84" cy="84" r="76" fill="none" stroke="#ff8a3d" stroke-width="10" stroke-linecap="round" /></svg>
+                  <b data-u="ring-pct" data-blank="0%">0%</b>
+                </div>
+                <div class="ua-prog-text">
+                  <h3 class="ua-swap" data-u="sep-title"><span data-i18n="ui.sep.t0">Preparing audio</span><span data-i18n="ui.sep.t1">Loading AI model</span><span data-i18n="ui.sep.t2">Separating stems</span><span data-i18n="ui.sep.t3">Saving stems</span><span data-i18n="ui.sep.t4">Separation complete</span></h3>
+                  <p class="ua-sub ua-swap" data-u="sep-sub"><span data-i18n="ui.sep.s0">Converting to 44.1 kHz stereo WAV</span><span data-i18n="ui.sep.s1">First run only, this can take a few minutes</span><span data-i18n="ui.sep.s2">The AI model is working through your track</span><span data-i18n="ui.sep.s3">Writing your stems to disk</span><span data-i18n="ui.sep.s4">Your stems are ready.</span></p>
+                  <ul class="ua-steps" data-u="sep-steps">
+                    <li data-i18n="ui.step.prepare">Prepare audio</li>
+                    <li data-i18n="ui.step.load">Load AI model</li>
+                    <li data-i18n="ui.step.separate">Separate stems</li>
+                    <li data-i18n="ui.step.save">Save stems</li>
+                  </ul>
+                  <span class="ua-btn" data-u="sep-cancel" data-i18n="ui.cancel">Cancel</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- failed job -->
+            <section class="ua-screen" data-u="fail">
+              <div class="ua-progress">
+                <div class="ua-ring">
+                  <svg viewBox="0 0 168 168"><circle cx="84" cy="84" r="76" fill="none" stroke="#232831" stroke-width="10" /><circle class="ua-ring-fail" cx="84" cy="84" r="76" fill="none" stroke="#ff5c6c" stroke-width="10" stroke-linecap="round" /></svg>
+                  <b>42%</b>
+                </div>
+                <div class="ua-prog-text ua-fail-text">
+                  <h3 data-i18n="ui.fail.title">Separation failed</h3>
+                  <p class="ua-sub ua-fail-msg" data-i18n="ui.fail.msg">The separation stopped because of an error.</p>
+                  <ul class="ua-steps">
+                    <li class="done" data-i18n="ui.step.prepare">Prepare audio</li>
+                    <li class="done" data-i18n="ui.step.load">Load AI model</li>
+                    <li class="failed" data-i18n="ui.step.separate">Separate stems</li>
+                    <li data-i18n="ui.step.save">Save stems</li>
+                  </ul>
+                  <div class="ua-report">
+                    <span class="ua-btn" data-u="report-copy" data-i18n="ui.fail.copy">Copy error report</span>
+                    <span class="ua-btn" data-i18n="ui.fail.github">Open GitHub Issues</span>
+                    <span class="ua-btn" data-u="report-facebook" data-i18n="ui.fail.facebook">Send error via author’s Facebook</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- song / mixer -->
+            <section class="ua-screen ua-song" data-u="song">
+              <div class="ua-banner"><span data-i18n="ui.banner">Playback may be silent in the Linux window — </span><span class="ua-banner-link" data-u="banner-open" data-i18n="ui.bannerOpen">Open in browser</span><span class="ua-banner-later" data-i18n="ui.bannerLater">Later</span></div>
+              <div class="ua-song-head">
+                <div class="ua-art"></div>
+                <div class="ua-song-title"><strong>My Song</strong><small>original.mp3</small></div>
+                <div class="ua-actions">
+                  <span class="ua-btn" data-u="reveal" data-i18n="ui.song.open">Open folder</span>
+                  <span class="ua-btn" data-u="export-open" data-i18n="ui.song.export">Export</span>
+                  <span class="ua-btn" data-i18n="ui.song.edit">Edit</span>
+                  <div class="ua-callout" data-u="callout">
+                    <strong data-i18n="ui.song.readyTitle">Your stems are ready</strong>
+                    <span data-i18n="ui.song.readyBody">Click Open folder and look inside <code>stems</code> for your FLAC files. You only need Export for other formats.</span>
+                  </div>
+                </div>
+              </div>
+              <div class="ua-card ua-mixer">
+                <div class="ua-mixer-head"><h3 data-i18n="ui.mixer">Mixer</h3><small data-i18n="ui.mixerSub">Balance, mute and solo each stem.</small></div>
+                <div class="ua-row c-original" data-u="row-original"><strong data-i18n="ui.original">Original</strong><div class="ua-wave"></div><div class="ua-ms"><span class="m on">M</span><span class="s">S</span></div><div class="ua-vol"></div></div>
+                <div class="ua-row c-vocals" data-u="row-vocals"><strong data-i18n="ui.vocals">Vocals</strong><div class="ua-wave"></div><div class="ua-ms"><span class="m">M</span><span class="s">S</span></div><div class="ua-vol"></div></div>
+                <div class="ua-row c-guitar" data-u="row-guitar"><strong>Guitar<i class="ua-split" data-u="split-open"></i></strong><div class="ua-wave"></div><div class="ua-ms"><span class="m">M</span><span class="s">S</span></div><div class="ua-vol"></div></div>
+                <div class="ua-row c-bass"><strong>Bass</strong><div class="ua-wave"></div><div class="ua-ms"><span class="m">M</span><span class="s">S</span></div><div class="ua-vol"></div></div>
+                <div class="ua-row c-drums" data-u="row-drums"><strong data-i18n="ui.drums">Drums</strong><div class="ua-wave"></div><div class="ua-ms"><span class="m">M</span><span class="s">S</span></div><div class="ua-vol"></div></div>
+                <div class="ua-row c-piano"><strong>Piano</strong><div class="ua-wave"></div><div class="ua-ms"><span class="m">M</span><span class="s">S</span></div><div class="ua-vol"></div></div>
+                <div class="ua-row c-other"><strong data-i18n="ui.other">Other</strong><div class="ua-wave"></div><div class="ua-ms"><span class="m">M</span><span class="s">S</span></div><div class="ua-vol"></div></div>
+                <div class="ua-row ua-row-opt c-lead" data-u="row-lead"><strong>Lead</strong><div class="ua-wave"></div><div class="ua-ms"><span class="m">M</span><span class="s">S</span></div><div class="ua-vol"></div></div>
+                <div class="ua-row ua-row-opt c-rhythm" data-u="row-rhythm"><strong>Rhythm</strong><div class="ua-wave"></div><div class="ua-ms"><span class="m">M</span><span class="s">S</span></div><div class="ua-vol"></div></div>
+              </div>
+              <div class="ua-transport">
+                <div class="ua-play" data-u="play"><span class="pl">▶</span><span class="pz">❚❚</span></div>
+                <span class="ua-time" data-u="clock" data-blank="0:00">0:00</span>
+                <div class="ua-seek"><i data-u="seek-fill"></i></div>
+                <span class="ua-time">3:34</span>
+                <div class="ua-speed"><span data-i18n="ui.speed">Speed</span><div class="ua-speedtrack"><div class="ua-thumb" data-u="speed-thumb"></div></div><b data-u="speed-val" data-blank="100%">100%</b></div>
+              </div>
+              <div class="ua-card ua-exporting">
+                <b data-u="exp-pct" data-blank="0%">0%</b>
+                <div><h3 class="ua-swap" data-u="job-title"><span class="on" data-i18n="ui.exp.title">Converting stems</span><span data-i18n="ui.split.running">Splitting guitar into lead &amp; rhythm</span></h3><p class="ua-sub ua-swap" data-u="job-sub"><span class="on" data-i18n="ui.exp.sub">Lossless and lossy copies stay inside this project.</span><span data-i18n="ui.split.runningSub">Second pass with the guitar model, slower than the stem split</span></p><span class="ua-track"><i data-u="exp-bar"></i></span></div>
+              </div>
+            </section>
+
+            <div class="ua-toast ua-swap" data-u="toast"><span data-t="setup" data-i18n="ui.toast.setup">Setup complete — you're ready to separate tracks.</span><span data-t="ready" data-i18n="ui.toast.ready">My Song is ready: 6 stems saved.</span><span data-t="split" data-i18n="ui.toast.split">My Song is ready: lead and rhythm saved.</span><span data-t="copied" data-i18n="ui.toast.copied">Copied — paste it in chat or a GitHub issue.</span></div>
+          </div>
+
+          <div class="ua-scrim" data-u="scrim"></div>
+          <div class="ua-dialog" data-u="export-dialog">
+            <h3 data-i18n="ui.exp.dialog">Export stems</h3>
+            <p data-i18n="ui.exp.dialogSub">Copies are written to this song’s <code>exports</code> folder; existing files of the same name are replaced.</p>
+            <div class="ua-label" data-i18n="ui.exp.formats">Formats</div>
+            <div class="ua-opts">
+              <div class="ua-opt on" data-u="fmt-flac">FLAC</div>
+              <div class="ua-opt" data-u="fmt-mp3">MP3 320</div>
+              <div class="ua-opt">Opus 192</div>
+              <div class="ua-opt">M4A 256</div>
+              <div class="ua-opt">WAV 16-bit</div>
+              <div class="ua-opt">AIFF</div>
+            </div>
+            <div class="ua-label" data-i18n="ui.exp.stems">Stems</div>
+            <div class="ua-opts">
+              <div class="ua-opt on" data-i18n="ui.vocals">Vocals</div>
+              <div class="ua-opt on">Guitar</div>
+              <div class="ua-opt on">Bass</div>
+              <div class="ua-opt on" data-i18n="ui.drums">Drums</div>
+              <div class="ua-opt on">Piano</div>
+              <div class="ua-opt on" data-i18n="ui.other">Other</div>
+            </div>
+            <div class="ua-dialog-foot"><span class="ua-btn" data-i18n="ui.close">Close</span><span class="ua-btn primary" data-u="export-submit" data-i18n="ui.song.export">Export</span></div>
+          </div>
+          <div class="ua-dialog sm" data-u="done-dialog">
+            <h3 data-i18n="ui.done.title">Export complete</h3>
+            <p data-i18n="ui.done.body">Exported 6 stems as MP3.</p>
+            <div class="ua-dialog-foot"><span class="ua-btn" data-i18n="ui.close">Close</span><span class="ua-btn primary" data-u="done-reveal" data-i18n="ui.done.open">Open exports folder</span></div>
+          </div>
+          <div class="ua-dialog ua-plan" data-u="plan-dialog">
+            <div class="ua-plan-head"><h3 data-i18n="ui.plan.title">Separation plan</h3><span class="ua-swap" data-u="plan-files"><span class="on" data-i18n="ui.plan.files6">6 files</span><span data-i18n="ui.plan.files5">5 files</span><span data-i18n="ui.plan.files8">2 passes · 8 files</span></span></div>
+            <p data-i18n="ui.plan.sub">Pick each stem’s fate. Anything folded in is mixed into <code>other.flac</code> and never written on its own.</p>
+            <div class="ua-plan-body">
+              <div class="ua-plan-rows">
+                <div class="ua-plan-row"><div class="ua-plan-node c-vocals" data-i18n="ui.vocals">Vocals</div><span class="ua-plan-act">→ other</span></div>
+                <div class="ua-plan-row"><div class="ua-plan-node c-drums" data-i18n="ui.drums">Drums</div><span class="ua-plan-act">→ other</span></div>
+                <div class="ua-plan-row"><div class="ua-plan-node c-bass">Bass</div><span class="ua-plan-act">→ other</span></div>
+                <div class="ua-plan-row"><div class="ua-plan-node c-guitar">Guitar</div><span class="ua-plan-act">→ other</span><span class="ua-plan-act split" data-u="plan-split" data-i18n="ui.plan.split">Split</span></div>
+                <div class="ua-plan-row ua-plan-leaf"><div class="ua-plan-node c-lead">Lead</div><span class="ua-plan-act">→ other</span></div>
+                <div class="ua-plan-row ua-plan-leaf"><div class="ua-plan-node c-rhythm">Rhythm</div><span class="ua-plan-act">→ other</span></div>
+                <div class="ua-plan-row" data-u="plan-row-piano"><div class="ua-plan-node c-piano">Piano</div><span class="ua-plan-act" data-u="plan-act-piano">→ other</span></div>
+                <div class="ua-plan-row"><div class="ua-plan-node c-other is-auto"><span data-i18n="ui.other">Other</span><em>auto</em></div></div>
+              </div>
+              <div class="ua-plan-file"><b>other.flac</b><span><span data-i18n="ui.other">Other</span><em>auto</em></span><span class="ua-plan-member" data-u="plan-member">Piano</span></div>
+            </div>
+            <div class="ua-dialog-foot"><small class="ua-swap" data-u="plan-foot"><span class="on" data-i18n="ui.plan.foot1">5 own files · 1 folded into other.flac</span><span data-i18n="ui.plan.foot2">4 own files · 2 folded into other.flac</span><span data-i18n="ui.plan.foot3">7 own files · 1 folded into other.flac</span></small><span class="ua-btn" data-i18n="ui.plan.reset">Reset</span><span class="ua-btn primary" data-u="plan-use" data-i18n="ui.plan.use">Use this plan</span></div>
+          </div>
+          <div class="ua-dialog" data-u="split-dialog">
+            <h3 data-i18n="ui.split.title">Split guitar</h3>
+            <p data-i18n="ui.split.sub">Choose a section of the guitar track for the lead and rhythm split. Splitting the whole track replaces the guitar stem with lead and rhythm. Splitting a section mutes that section in the guitar stem, so the three tracks play back as the original.</p>
+            <div class="ua-trimwave"><div class="ua-wave c-guitar"></div><div class="ua-trimsel" data-u="split-sel"></div><div class="ua-handle" data-u="split-start"></div><div class="ua-handle end" data-u="split-end"></div></div>
+            <div class="ua-dialog-foot"><span class="ua-btn" data-i18n="ui.cancel">Cancel</span><span class="ua-btn primary" data-u="split-submit" data-i18n="ui.split.submit">Split into lead &amp; rhythm</span></div>
+          </div>
+          <div class="ua-dialog sm" data-u="queue-dialog">
+            <h3 data-i18n="ui.queue.title">Job queue</h3>
+            <p data-i18n="ui.queue.sub">Jobs run one after another. Different songs can run side by side when your computer has room.</p>
+            <div class="ua-qrow"><div><strong>My Song</strong><small><span data-i18n="ui.pill">Separating</span> · 35%</small><span class="ua-track"><i class="q35"></i></span></div><span class="ua-btn" data-i18n="ui.queue.open">Open</span><span class="ua-btn" data-i18n="ui.cancel">Cancel</span></div>
+            <div class="ua-qrow"><div><strong>Second Song</strong><small data-i18n="ui.queue.waiting">Separating · Waiting · #1 in line</small><span class="ua-track"></span></div><span class="ua-btn" data-i18n="ui.queue.open">Open</span><span class="ua-btn" data-i18n="ui.cancel">Cancel</span></div>
+          </div>
+          <div class="ua-files" data-u="files">
+            <header><span aria-hidden="true">▰</span><b data-u="files-path"></b></header>
+            <ul data-u="files-list"></ul>
+          </div>
+          <div class="ua-ghost" data-u="ghost">♪ My Song.mp3</div>
+          <div class="ua-ripple"></div>
+          <svg class="ua-cursor" viewBox="0 0 24 24"><path d="M4 2l15 11.5-6.6 1 3.9 7.2-3 1.5-3.8-7.3L4 20.5z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round" /></svg>
+        </div>
+      </div>
+
+      <div class="player-bar">
+        <button type="button" id="player-back" class="player-btn" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg></button>
+        <button type="button" id="player-toggle" class="player-btn" aria-label="Play or pause" data-state="playing">
+          <svg class="i-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
+          <svg class="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z" /></svg>
+          <svg class="i-replay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.6-5.9L4 8.5M4 3.5v5h5" /></svg>
+        </button>
+        <button type="button" id="player-next" class="player-btn" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7" /></svg></button>
+        <div id="player-segs" class="player-segs"></div>
+        <span id="player-count" class="player-count"></span>
+        <button type="button" id="player-scenario" class="player-scenario" hidden><span data-i18n="guide.next">Next:</span> <b id="player-scenario-name"></b> →</button>
+      </div>
+      <p id="guide-caption" class="guide-caption"><strong></strong><span></span></p>
+    </div>
+
+  </div>
+</main>
+
+<div class="guide-cta">
+  <div class="wrap">
+    <h2 data-i18n="guide.cta">Ready to try it?</h2>
+    <a class="btn" href="https://github.com/um1chc5/unweave/releases/latest/download/Unweave-Setup-x64.exe" data-i18n="hero.btn">Download for Windows</a>
+    <p class="sub-note"><a href="https://github.com/um1chc5/unweave/blob/main/docs/linux-install.md">Linux</a> · <a href="https://github.com/um1chc5/unweave/blob/main/docs/macos-install.md">macOS</a></p>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p data-i18n="footer.p1">MIT licensed. Made by <a href="https://github.com/um1chc5">um1chc5</a>, based on <a href="https://github.com/pedromtcosta/sound-razor">Sound Razor</a> by pedromtcosta.</p>
+    <p data-i18n="footer.p2"><a href="https://github.com/um1chc5/unweave">Source on GitHub</a> · <a href="https://www.facebook.com/um1chc5/">Facebook</a> · <a href="https://github.com/um1chc5/unweave/releases">All releases</a> · <a href="https://github.com/um1chc5/unweave/issues">Report an issue</a></p>
+  </div>
+</footer>
+
+<script>
+window.SITE_TRANSLATIONS = {
+  vi: {
+    "guide.h1": "Cách dùng Unweave",
+    "guide.lead": "Chọn một chủ đề. Mỗi chủ đề tự chạy, hoặc bạn có thể dùng nút Lùi và Tiếp.",
+    "guide.cta": "Sẵn sàng thử chưa?",
+    "sc.basic": "Cơ bản",
+    "basic.1.t": "Cài đặt và thiết lập",
+    "basic.1.p": "Chạy bộ cài rồi mở Unweave. Lần mở đầu tiên sẽ liệt kê những thứ cần tải (~1.7 GB). Bấm Tải &amp; cài đặt một lần; Nhập từ YouTube là tùy chọn.",
+    "basic.2.t": "Thêm bài hát",
+    "basic.2.p": "Ở trang Tách nhạc, thả tệp âm thanh vào khung hoặc bấm duyệt tệp. Hỗ trợ WAV, MP3, FLAC, M4A, OGG, AAC và AIFF.",
+    "basic.3.t": "Chọn track",
+    "basic.3.p": "Cả sáu track đều được chọn sẵn, nên thường bạn có thể giữ nguyên. Nếu bỏ chọn một track, âm thanh của nó sẽ chuyển vào Khác, miễn là Khác vẫn được chọn. Sau đó bấm Bắt đầu tách.",
+    "basic.4.t": "Chờ tách nhạc",
+    "basic.4.p": "Mọi thứ chạy trên máy của bạn, không tải lên đâu cả. Lần đầu sẽ tải thêm mô hình AI (~500 MB); các lần sau bắt đầu ngay.",
+    "basic.5.t": "Nghe kết quả",
+    "basic.5.p": "Bài hát có bàn trộn với mỗi track một hàng. Bấm phát để nghe. Phần “Luyện tập một bài” cho biết bàn trộn còn làm được gì.",
+    "basic.6.t": "Lấy các tệp track",
+    "basic.6.p": "Các track đã được lưu sẵn. Bấm Mở thư mục rồi vào <code>stems</code> để lấy các tệp FLAC. Bạn không cần xuất tệp.",
+    "sc.youtube": "Dùng link YouTube",
+    "youtube.1.t": "Dán link",
+    "youtube.1.p": "Chuyển sang YouTube, dán link rồi bấm Tải bài hát. Nếu đã bỏ qua hỗ trợ YouTube khi thiết lập, ứng dụng sẽ đề xuất tải thêm tại đây (~15 MB). Chỉ tải những video bạn có quyền sử dụng.",
+    "youtube.2.t": "Cắt một đoạn",
+    "youtube.2.p": "Khi tùy chọn cắt đoạn được chọn, bài hát sẽ chờ bạn sau khi tải xong. Kéo các tay cầm để giữ một đoạn, hoặc để nguyên để dùng cả bài.",
+    "youtube.3.t": "Bắt đầu tách",
+    "youtube.3.p": "Bấm Bắt đầu tách. Chỉ đoạn bạn giữ lại được tách, và từ đây mọi thứ giống như các bài hát khác.",
+    "sc.practise": "Luyện tập một bài",
+    "practise.1.t": "Nghe riêng một track",
+    "practise.1.p": "Bấm phát, rồi bấm S trên một track để chỉ nghe track đó. Bấm S lần nữa để nghe lại các track khác.",
+    "practise.2.t": "Tắt tiếng một track",
+    "practise.2.p": "Bấm M để bỏ một track khỏi bản trộn, ví dụ tắt trống nếu bạn muốn tự chơi phần đó.",
+    "practise.3.t": "Làm chậm bài hát",
+    "practise.3.p": "Kéo Tốc độ xuống, thấp nhất là 50%. Bài hát chậm lại mà không đổi cao độ.",
+    "sc.export": "Xuất định dạng khác",
+    "export.1.t": "Chọn định dạng và track",
+    "export.1.p": "Cần MP3 hoặc WAV? Bấm Xuất tệp, rồi chọn định dạng và track bạn muốn. Nếu dùng FLAC thì có thể bỏ qua, vì các tệp đó đã có trong <code>stems</code>.",
+    "export.2.t": "Chờ xuất tệp",
+    "export.2.p": "Unweave chuyển đổi các bản sao của track. Các tệp trong <code>stems</code> vẫn giữ nguyên.",
+    "export.3.t": "Mở thư mục xuất",
+    "export.3.p": "Khi xong, bấm Mở thư mục xuất. Xuất lại cùng định dạng sẽ ghi đè các tệp đó.",
+    "sc.advanced": "Tùy chọn nâng cao",
+    "advanced.1.t": "Tách một đoạn",
+    "advanced.1.p": "Sau khi thêm tệp, kéo các tay cầm ở phần Đoạn để chỉ tách một phần bài hát.",
+    "advanced.2.t": "Gộp track bằng kế hoạch",
+    "advanced.2.p": "Bấm Kế hoạch nâng cao…, rồi bấm → other trên một track để trộn nó vào <code>other.flac</code> thay vì tạo tệp riêng. Bấm Dùng kế hoạch này, rồi bắt đầu như bình thường.",
+    "advanced.3.t": "Tách guitar trong kế hoạch",
+    "advanced.3.p": "Trong Kế hoạch nâng cao…, bấm Tách ở Guitar để có Lead và Rhythm ngay trong cùng một lần chạy. Bấm Dùng kế hoạch này, rồi bắt đầu như bình thường. Việc này lâu hơn khoảng 10 lần, nên chọn đoạn ngắn sẽ đỡ tốn thời gian.",
+    "advanced.4.t": "Tách guitar sau khi tách nhạc",
+    "advanced.4.p": "Đã tách bài hát rồi? Trong bàn trộn, bấm biểu tượng tách cạnh Guitar rồi chọn một đoạn. Việc này chậm hơn nhiều so với tách thường, nên chọn đoạn ngắn sẽ đỡ tốn thời gian.",
+    "advanced.5.t": "Thêm bài vào hàng đợi",
+    "advanced.5.p": "Khi một bài đang chạy, nút sẽ đổi thành Thêm vào hàng đợi. Bấm chỉ báo tác vụ ở trên cùng để xem, mở hoặc hủy tác vụ.",
+    "sc.trouble": "Khi gặp lỗi",
+    "trouble.1.t": "Sao chép báo cáo lỗi",
+    "trouble.1.p": "Nếu một tác vụ thất bại, bấm Sao chép báo cáo lỗi. Thao tác này sao chép các thông tin cần để tìm ra vấn đề.",
+    "trouble.2.t": "Gửi qua Facebook",
+    "trouble.2.p": "Bấm Gửi lỗi qua Facebook tác giả rồi dán báo cáo vào tin nhắn. Đây là cách tốt nhất để liên hệ với tác giả.",
+    "trouble.3.t": "Không có tiếng trên Linux",
+    "trouble.3.p": "Nếu phát nhạc bị mất tiếng trong cửa sổ Linux, bấm Mở trong trình duyệt trên thanh thông báo. Cùng ứng dụng đó sẽ mở trong trình duyệt của bạn.",
+    "guide.next": "Tiếp:",
+    "ui.pillSplit": "Đang tách guitar",
+    "ui.pillWait": "1 đang chờ",
+    "ui.new.queue": "Thêm vào hàng đợi",
+    "ui.plan.open": "Kế hoạch nâng cao…",
+    "ui.plan.summary": "Kế hoạch nâng cao · 4 riêng · 2 trong other.flac",
+    "ui.plan.summary2": "Kế hoạch nâng cao · 7 riêng · 1 trong other.flac",
+    "ui.plan.edit": "Sửa kế hoạch",
+    "ui.plan.title": "Kế hoạch tách",
+    "ui.plan.files6": "6 file",
+    "ui.plan.files5": "5 file",
+    "ui.plan.files8": "2 lượt · 8 file",
+    "ui.plan.sub": "Chọn cách xử lý từng track. Track được gộp sẽ trộn vào <code>other.flac</code> và không có tệp riêng.",
+    "ui.plan.foot1": "5 file riêng · 1 gộp vào other.flac",
+    "ui.plan.foot2": "4 file riêng · 2 gộp vào other.flac",
+    "ui.plan.foot3": "7 file riêng · 1 gộp vào other.flac",
+    "ui.plan.split": "Tách",
+    "ui.plan.reset": "Đặt lại",
+    "ui.plan.use": "Dùng kế hoạch này",
+    "ui.split.title": "Tách guitar",
+    "ui.split.sub": "Chọn một đoạn của track guitar để tách lead và rhythm. Tách cả bài thì lead và rhythm thay cho track guitar gốc. Tách một đoạn thì đoạn đó trong track guitar được tắt tiếng, để ba track phát lại đúng như bản gốc.",
+    "ui.split.submit": "Tách thành lead &amp; rhythm",
+    "ui.split.running": "Đang tách guitar thành lead &amp; rhythm",
+    "ui.split.runningSub": "Lượt thứ hai với mô hình guitar, chậm hơn lượt tách track",
+    "ui.queue.title": "Hàng đợi",
+    "ui.queue.sub": "Các tác vụ chạy lần lượt. Nhiều bài khác nhau có thể chạy song song khi máy còn đủ tài nguyên.",
+    "ui.queue.open": "Mở",
+    "ui.queue.waiting": "Đang tách nhạc · Đang chờ · thứ 1",
+    "ui.fail.title": "Tách nhạc thất bại",
+    "ui.fail.msg": "Quá trình tách đã dừng do gặp lỗi.",
+    "ui.fail.copy": "Sao chép báo cáo lỗi",
+    "ui.fail.github": "Mở GitHub Issues",
+    "ui.fail.facebook": "Gửi lỗi qua Facebook tác giả",
+    "ui.banner": "Phát nhạc có thể bị mất tiếng trong cửa sổ Linux — ",
+    "ui.bannerOpen": "Mở trong trình duyệt",
+    "ui.bannerLater": "Để sau",
+    "ui.toast.split": "My Song đã sẵn sàng: đã lưu lead và rhythm.",
+    "ui.toast.copied": "Đã sao chép — dán vào chat hoặc GitHub issue.",
+    "hero.btn": "Tải cho Windows",
+    "ui.separate": "Tách nhạc",
+    "ui.library": "Thư viện",
+    "ui.pill": "Đang tách",
+    "ui.optional": "tùy chọn",
+    "ui.vocals": "Giọng hát",
+    "ui.drums": "Trống",
+    "ui.other": "Khác",
+    "ui.original": "Bản gốc",
+    "ui.cancel": "Hủy",
+    "ui.close": "Đóng",
+    "ui.chip.required": "Bắt buộc",
+    "ui.chip.optional": "Tùy chọn",
+    "ui.chip.installing": "Đang cài",
+    "ui.chip.installed": "✓ Đã cài",
+    "ui.setup.title": "Thiết lập Unweave",
+    "ui.setup.sub": "Cần tải một vài thứ trước khi bạn có thể tách nhạc. Sau bước này mọi thứ đều 100% cục bộ — không tài khoản, không theo dõi, không hỏi lại.",
+    "ui.setup.ffmpeg": "Đọc, chuyển đổi và xuất âm thanh ở mọi định dạng phổ biến.",
+    "ui.setup.engine": "Bộ xử lý tách nhạc",
+    "ui.setup.engineDesc": "PyTorch và các thư viện AI tách bài hát thành từng track.",
+    "ui.setup.yt": "Nhập từ YouTube",
+    "ui.setup.ytDesc": "Lấy âm thanh bài hát trực tiếp từ link YouTube (yt-dlp).",
+    "ui.setup.total": "Tổng dung lượng tải:",
+    "ui.setup.note": "Lưu trong thư mục dữ liệu ứng dụng. Mô hình AI (~500 MB) được tải khi bạn tách bài hát đầu tiên.",
+    "ui.setup.later": "Để sau",
+    "ui.setup.install": "Tải &amp; cài đặt",
+    "ui.new.title": "Tách một bài hát",
+    "ui.new.sub": "Chọn một bản nhạc, chọn các track bạn muốn, Unweave sẽ tách ngay trên máy này. Không có gì được tải lên.",
+    "ui.new.choose": "Chọn âm thanh",
+    "ui.new.file": "Tệp",
+    "ui.new.drop": "Thả bài hát vào đây, hoặc <u>duyệt tệp</u>",
+    "ui.new.ytLabel": "Link YouTube",
+    "ui.new.trimFirst": "Cho tôi cắt đoạn trước khi tách",
+    "ui.new.downloading": "Đang tải từ YouTube",
+    "ui.new.section": "Đoạn",
+    "ui.new.details": "Thông tin bài hát",
+    "ui.new.stems": "Track cần tách",
+    "ui.new.custom": "Nhạc cụ",
+    "ui.new.customSub": "Chọn từng track riêng",
+    "ui.new.vocals": "Giọng hát + Nhạc nền",
+    "ui.new.vocalsSub": "Tách thành 2 track (karaoke)",
+    "ui.new.hint": "Nhạc cụ không chọn sẽ bị bỏ. Chọn “Khác” để giữ mọi thứ còn lại trong một track.",
+    "ui.new.save": "Lưu vào",
+    "ui.new.change": "Đổi",
+    "ui.new.start": "Bắt đầu tách",
+    "ui.new.download": "Tải bài hát",
+    "ui.sep.t0": "Đang chuẩn bị âm thanh",
+    "ui.sep.t1": "Đang tải mô hình AI",
+    "ui.sep.t2": "Đang tách track",
+    "ui.sep.t3": "Đang lưu track",
+    "ui.sep.t4": "Tách nhạc hoàn tất",
+    "ui.sep.s0": "Đang chuyển sang WAV stereo 44.1 kHz",
+    "ui.sep.s1": "Chỉ lần chạy đầu tiên, có thể mất vài phút",
+    "ui.sep.s2": "Mô hình AI đang xử lý bản nhạc của bạn",
+    "ui.sep.s3": "Đang ghi các track vào ổ đĩa",
+    "ui.sep.s4": "Các track của bạn đã sẵn sàng.",
+    "ui.step.prepare": "Chuẩn bị âm thanh",
+    "ui.step.load": "Tải mô hình AI",
+    "ui.step.separate": "Tách track",
+    "ui.step.save": "Lưu track",
+    "ui.song.open": "Mở thư mục",
+    "ui.song.export": "Xuất tệp",
+    "ui.song.edit": "Sửa",
+    "ui.song.readyTitle": "Các track đã sẵn sàng",
+    "ui.song.readyBody": "Bấm Mở thư mục rồi vào <code>stems</code> để lấy các tệp FLAC. Bạn chỉ cần Xuất tệp khi muốn định dạng khác.",
+    "ui.mixer": "Bàn trộn",
+    "ui.mixerSub": "Cân bằng, tắt tiếng và solo từng track.",
+    "ui.speed": "Tốc độ",
+    "ui.exp.title": "Đang chuyển đổi track",
+    "ui.exp.sub": "Các bản sao (nén và không nén) được lưu trong dự án này.",
+    "ui.exp.dialog": "Xuất track",
+    "ui.exp.dialogSub": "Bản sao được ghi vào thư mục <code>exports</code> của bài hát này; tệp trùng tên sẽ bị ghi đè.",
+    "ui.exp.formats": "Định dạng",
+    "ui.exp.stems": "Track",
+    "ui.done.title": "Xuất tệp hoàn tất",
+    "ui.done.body": "Đã xuất 6 track dưới dạng MP3.",
+    "ui.done.open": "Mở thư mục xuất",
+    "ui.toast.setup": "Thiết lập hoàn tất — bạn đã sẵn sàng để tách nhạc.",
+    "ui.toast.ready": "My Song đã sẵn sàng: đã lưu 6 track."
+  }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt" crossorigin="anonymous"></script>
+<script src="assets/site.js"></script>
+<script src="assets/guide.js"></script>
+</body>
+</html>

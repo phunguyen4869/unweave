@@ -381,5 +381,33 @@ class ThreadShareTests(unittest.TestCase):
             self.assertEqual(library._thread_env(), {})
 
 
+class SplitReplacesGuitarTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.stage = Path(self.temporary.name)
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def write(self, *names):
+        for name in names:
+            (self.stage / name).write_bytes(b"x" * 100)
+
+    def test_lead_and_rhythm_replace_the_guitar(self):
+        self.write("guitar.flac", "lead.flac", "rhythm.flac", "vocals.flac")
+        Library._drop_split_guitar(self.stage)
+        self.assertEqual(sorted(p.name for p in self.stage.iterdir()),
+                         ["lead.flac", "rhythm.flac", "vocals.flac"])
+
+    def test_a_legacy_wav_guitar_is_replaced_too(self):
+        self.write("guitar.wav", "lead.flac", "rhythm.flac")
+        Library._drop_split_guitar(self.stage)
+        self.assertFalse((self.stage / "guitar.wav").exists())
+
+    def test_leaves_folded_into_other_keep_the_guitar(self):
+        self.write("guitar.flac", "other.flac")
+        Library._drop_split_guitar(self.stage)
+        self.assertTrue((self.stage / "guitar.flac").exists())
+
 if __name__ == "__main__":
     unittest.main()

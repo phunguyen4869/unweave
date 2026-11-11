@@ -7,6 +7,17 @@ import {coverImage} from '../features/covers.js';
 import {ORIGINAL_FILE, EXPORT_FORMATS} from '../core/constants.js';
 import {TrimEditor, trimRequest, sectionText, formatClock} from '../audio/trim.js';
 import {t} from '../core/i18n.js';
+// The callout teaches one fact, so it only shows until the user has acknowledged it;
+// the button highlight still marks each newly finished song.
+const STEMS_HINT_KEY = 'unweave.stemsFolderHintSeen';
+function stemsHintSeen() {
+  try { return localStorage.getItem(STEMS_HINT_KEY) === '1'; } catch (_) { return false; }
+}
+function acknowledgeStemsReady() {
+  try { localStorage.setItem(STEMS_HINT_KEY, '1'); } catch (_) { /* nicety only */ }
+  store.stemsReady.delete(store.selected);
+  renderSong();
+}
 function storedTrim(project, duration) {
   const trim = project.separation?.trim;
   if (!trim || typeof trim !== 'object') return null;
@@ -101,7 +112,11 @@ function exportOptions(host, items, checked, kind, translate) {
     return label;
   }));
 }
-function openExportDialog(success = false) {
+const EXPORT_LABELS = {flac: 'FLAC', mp3: 'MP3', opus: 'Opus', m4a: 'M4A', wav16: 'WAV', aiff: 'AIFF'};
+export function exportSummary(job) {
+  return t('nav.exportedNotice', {count: job.stems.length, formats: (job.formats || []).map(f => EXPORT_LABELS[f] || f).join(', ')});
+}
+function openExportDialog() {
   const project = activeProject();
   if (!project) return;
   exportOptions($('export-formats'), EXPORT_FORMATS, value => value === 'flac', 'format', true);
@@ -125,8 +140,6 @@ function openExportDialog(success = false) {
   $('export-section-note').hidden = !sectioned;
   $('export-section-note').textContent = sectioned
     ? t('export.sectionNote', {length: sectionLength.toFixed(1), start: formatClock(sectionStart, 1)}) : '';
-  $('export-success').hidden = !success;
-  $('export-reveal').hidden = !success;
   $('export-clipping').checked = true;
   $('export-warning').hidden = true;
   $('export-error').textContent = '';
@@ -174,13 +187,17 @@ export function renderSong() {
   $('delete-open').disabled = busyHere;
   $('resep-open').disabled = busyHere;
   $('export-open').disabled = !hasStems || busyHere;
+  const stemsReady = store.stemsReady.has(project.id) && hasStems && !busyHere;
+  $('reveal').classList.toggle('stems-ready', stemsReady);
+  $('stems-ready-hint').hidden = !stemsReady || stemsHintSeen();
   document.querySelectorAll('[data-split-guitar]').forEach(button => { button.disabled = busyHere; });
   const exported = store.exportPending && findJob(store.exportPending.jobId);
   if (exported && exported.project === store.selected) {
     if (exported.status === 'succeeded' && store.exportOffered !== exported.id) {
       store.exportOffered = exported.id;
       store.exportPending = null;
-      openExportDialog(true);
+      $('export-done-summary').textContent = exportSummary(exported);
+      if (!$('export-done-dialog').open) $('export-done-dialog').showModal();
     } else if (['failed', 'cancelled'].includes(exported.status)) {
       store.exportPending = null;
     }
@@ -207,10 +224,19 @@ $('separate').onclick = async () => {
     await nav.refresh();
   } catch (error) { notice(error.message, 'error'); renderSong(); }
 };
-$('reveal').onclick = () => api(`${projectUrl(store.selected)}/reveal`, {root: store.state.root, target: 'project'}).catch(e => notice(e.message, 'error'));
-$('export-open').onclick = () => openExportDialog(false);
+$('reveal').onclick = () => {
+  const id = store.selected;
+  acknowledgeStemsReady();
+  api(`${projectUrl(id)}/reveal`, {root: store.state.root, target: 'project'}).catch(e => notice(e.message, 'error'));
+};
+$('stems-ready-dismiss').onclick = acknowledgeStemsReady;
+$('export-open').onclick = () => openExportDialog();
 $('export-clipping').onchange = () => { $('export-warning').hidden = $('export-clipping').checked; };
-$('export-reveal').onclick = () => api(`${projectUrl(store.selected)}/reveal`, {root: store.state.root, target: 'exports'}).catch(e => notice(e.message, 'error'));
+$('export-done-reveal').onclick = () => {
+  // Close first: a toast about a failed open would otherwise sit behind the modal.
+  $('export-done-dialog').close();
+  api(`${projectUrl(store.selected)}/reveal`, {root: store.state.root, target: 'exports'}).catch(e => notice(e.message, 'error'));
+};
 $('export-form').onsubmit = async event => {
   event.preventDefault();
   if (!store.selected || jobPending(projectJob(store.selected))) return;

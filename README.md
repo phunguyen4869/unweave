@@ -32,7 +32,7 @@ Unweave packages Sound Razor into a native Windows application with an enhanced,
 - Installs to Program Files (default: `C:\Program Files\Unweave`) — requires administrator rights, so Windows will prompt for them
 - Creates a Start Menu entry and registers an uninstaller; you choose whether to also add a desktop icon
 
-On first launch the app window opens immediately and shows a one-time setup screen. You explicitly consent to download and install the remaining pieces — FFmpeg and the PyTorch/audio-separation stack (~1.6 GB total) — before anything downloads. They go into `%LOCALAPPDATA%\Unweave`, which the uninstaller cleans up. AI models (~500 MB) are then downloaded on first separation.
+On first launch the app window opens immediately and shows a one-time setup screen. You explicitly consent to download and install the remaining pieces — FFmpeg and the PyTorch/audio-separation stack (~1.7 GB total) — before anything downloads. They go into `%LOCALAPPDATA%\Unweave`, which the uninstaller cleans up. AI models (~500 MB) are then downloaded on first separation.
 
 ### For Developers
 

@@ -6,6 +6,8 @@ import json
 import urllib.error
 import urllib.request
 
+from .netutil import urlopen
+
 GITHUB_OWNER = "um1chc5"
 GITHUB_REPO = "unweave"
 RELEASES_LATEST_API = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
@@ -51,7 +53,7 @@ def fetch_latest_release(user_agent: str, opener=None) -> dict:
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )
-    open_url = opener or (lambda req: urllib.request.urlopen(req, timeout=FETCH_TIMEOUT_S))
+    open_url = opener or (lambda req: urlopen(req, timeout=FETCH_TIMEOUT_S))
     try:
         with open_url(request) as response:
             payload = json.loads(response.read().decode("utf-8"))

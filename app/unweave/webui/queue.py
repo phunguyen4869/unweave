@@ -21,8 +21,9 @@ from ..audio.exports import FORMATS, export_stems
 from ..tools import (MISSING_FFMPEG, PCM_BYTES_PER_SECOND, app_version, cpu_threads, ensure_ffmpeg_on_path,
                      env_first, require_free_space, total_ram_gb)
 from ..processes import popen, stop as stop_process
-from ..setup_env import (FFMPEG_SIZE_MB, RUNTIME_SIZE_MB, SEPARATION_SIZE_MB, YOUTUBE_SIZE_MB,
-                         ffmpeg_ok, runtime_ok, separation_ok, youtube_ok, run_setup, torch_has_cuda)
+from ..setup_env import (FFMPEG_SIZE_MB, RUNTIME_SIZE_MB, SEPARATION_SIZE_MB, VCRUNTIME_SIZE_MB,
+                         YOUTUBE_SIZE_MB, ffmpeg_ok, runtime_ok, separation_ok, vcruntime_ok,
+                         youtube_ok, run_setup, torch_has_cuda)
 from ..fsutil import dir_bytes, is_link_like
 from .plans import plan_stems, selection_stems, validate_group
 from .progress import YTDLP_PROGRESS, clock_seconds, track_progress
@@ -40,8 +41,9 @@ def cli_failure_message(kind: str, code: int) -> str:
     """Human-readable subprocess failure; notes native Windows crashes when applicable."""
     if code in _WIN_ACCESS_VIOLATION:
         return (f"{kind} crashed (Windows access violation, code {code}). "
-                "Often a damaged separation engine or model cache — "
-                "try Settings → Components → Repair, then Storage → Clear models.")
+                "Most often an outdated Microsoft Visual C++ runtime — install the latest "
+                "(aka.ms/vs/17/release/vc_redist.x64.exe) and restart Unweave. If it still "
+                "crashes, try Settings → Components → Repair, then Storage → Clear models.")
     return f"{kind} exited with code {code}. See the process log."
 
 class JobLog:
@@ -322,7 +324,9 @@ class JobQueueMixin:
                "pass_count": 2 if split_leaves else 1, "pass_index": 1,
                "_project": project, "_original": info["original"],
                "_stems": chosen, "_group": chosen_group,
-               "_split_leaves": bool(split_leaves), "_trim": saved_trim, "_disk_need": disk_need}
+               "_split_leaves": bool(split_leaves), "_trim": saved_trim, "_disk_need": disk_need,
+               # A split-only job updates the guitar stem itself (--replace-source).
+               "_replace_guitar": bool(split_leaves)}
         return self._enqueue(job)
 
     def _seconds(self, project, info, guitar_split, trim) -> float:
@@ -372,13 +376,23 @@ class JobQueueMixin:
             {"id": "youtube", "label": "YouTube import support (yt-dlp)", "size_mb": YOUTUBE_SIZE_MB,
              "required": False, "missing": not youtube_ok(), "done": youtube_ok()},
         ]
+        # A Windows prerequisite, not part of the app: shown only when it needs installing,
+        # and kept for the rest of the setup job that installs it so the card doesn't vanish.
+        vc_ok = vcruntime_ok()
+        installing = any(job.get("kind") == "setup" and "vcruntime" in job.get("_stages", ())
+                         and job.get("status") in {"queued", "running", "cancelling"}
+                         for job in [*self.active_jobs.values(), *self.queue])
+        if sys.platform == "win32" and (not vc_ok or installing):
+            stages.insert(1, {"id": "vcruntime", "label": "Microsoft Visual C++ runtime",
+                              "size_mb": VCRUNTIME_SIZE_MB, "required": True,
+                              "missing": not vc_ok, "done": vc_ok})
         return {"required": any(s["required"] and s["missing"] for s in stages),
                 "stages": stages,
                 "total_mb": sum(s["size_mb"] for s in stages if s["missing"])}
 
     def start_setup(self, stages: list[str], *, repair: bool = False):
         with self.lock:
-            allowed = {"ffmpeg", "separation", "youtube"}
+            allowed = {"vcruntime", "ffmpeg", "separation", "youtube"}
             stages = [stage for stage in stages if stage in allowed]
             if not stages:
                 raise ValueError("Nothing to set up.")
@@ -495,6 +509,8 @@ class JobQueueMixin:
                     job_logs.append(message)
                     raise RuntimeError(message)
                 self._expect_outputs(stage, stems, group)
+                if job.get("_replace_guitar"):
+                    self._drop_split_guitar(stage)
                 # Publish only a successful run; preserve the old stems on failure.
                 with self.lock:
                     if job["status"] == "cancelling":
@@ -529,12 +545,15 @@ class JobQueueMixin:
     def _separation_command(self, job, project: Path, original: str, stage: Path,
                             stems: list[str], group, split_leaves: bool, trim):
         range_args = ["--start", f"{trim[0]:.3f}", "--end", f"{trim[1]:.3f}"] if trim else []
+        # A native crash (torch/onnxruntime access violation) otherwise kills the CLI with
+        # no traceback; faulthandler prints the Python stack into the job log first.
+        python = [sys.executable, "-X", "faulthandler"]
         if job["kind"] == "split-guitar":
             shutil.copytree(project / 'stems', stage)
-            return [sys.executable, '-m', 'unweave', 'split-guitar',
+            return [*python, '-m', 'unweave', 'split-guitar',
                     '--file', str(stage / stem_file(stage, 'guitar')), '--output', str(stage),
-                    '--cache', str(self.cache), *range_args]
-        command = [sys.executable, "-m", "unweave", "separate", "--file", str(project / original),
+                    '--cache', str(self.cache), '--replace-source', *range_args]
+        command = [*python, "-m", "unweave", "separate", "--file", str(project / original),
                    "--output", str(stage), "--cache", str(self.cache)]
         if group is not None:
             # An explicit plan may legitimately keep no stem of its own, so send
@@ -547,6 +566,17 @@ class JobQueueMixin:
         if split_leaves:
             command += ["--split-guitar"]
         return command + range_args
+
+    @staticmethod
+    def _drop_split_guitar(stage: Path):
+        """Remove the guitar stem once lead and rhythm replace it, after a separation that
+        also split the guitar (always the whole of it). The split writes rhythm as guitar
+        minus lead, so the pair adds back up to the guitar. Leaves folded into other.flac
+        do not replace it."""
+        if not all(stem_file(stage, name) for name in ('lead', 'rhythm')):
+            return
+        for extension in ('.flac', '.wav'):
+            (stage / f'guitar{extension}').unlink(missing_ok=True)
 
     def _expect_outputs(self, stage: Path, stems: list[str], group):
         """A merged stem must NOT reach the stage: only own files and other.flac do."""

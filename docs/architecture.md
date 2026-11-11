@@ -211,7 +211,13 @@ These are the non-obvious decisions; most bugs in this area came from breaking o
 
 ### `webui/`
 
-- `server.py` — stdlib `http.server` on 127.0.0.1:8765 with a per-session token header.
+- `server.py` — stdlib `http.server` on 127.0.0.1:8765 with a per-session token header. The port is
+  bound exclusively (on Windows `SO_REUSEADDR` would let it share a port another program listens on).
+  When another program holds 8765 the app moves to the next free port, which resets the theme and
+  language for that run, since the page keeps them in per-port `localStorage`. When Unweave itself
+  holds it (a second launch), `ui_entrypoint.py` opens a window on that server instead of starting a
+  second one. The window opens only once the server listens; if it never does, an error window
+  points at `launch.log`.
   Everything outside `/api/` is a static file from `web/`. API dispatch goes through a
   tiny Express-style `router.py`; handlers are registered in `routes/`
   (`system`, `meta`, `projects`, `window`).

@@ -1,6 +1,6 @@
 """Regenerate og-image.png, the 1200x630 link-preview card for the landing page.
 
-    python docs/assets/make_og_image.py
+    python docs/landing-page/assets/make_og_image.py
 
 Needs Pillow. Uses Segoe UI on Windows, else DejaVu Sans.
 """

@@ -26,8 +26,50 @@
 .meta-item { font-size: 12px; padding: 3px 10px; border-radius: 20px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text-2); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .meta-item:empty { display: none; }
 .meta-file { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
-.song-actions { display: flex; flex-wrap: wrap; gap: 8px; align-self: flex-start; }
+.song-actions { position: relative; display: flex; flex-wrap: wrap; gap: 8px; align-self: flex-start; }
 .song-actions .btn-danger { width: 32px; padding: 0; }
+/* Points new users at the stems on disk once a separation finishes. */
+.btn-ghost.stems-ready {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  animation: stems-ready-pulse 1.4s ease-out 3;
+}
+@keyframes stems-ready-pulse {
+  from { box-shadow: 0 0 0 0 var(--accent-ring); }
+  to { box-shadow: 0 0 0 10px rgba(255, 138, 61, 0); }
+}
+.stems-ready-hint {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 5;
+  width: min(300px, calc(100vw - 48px));
+  padding: 12px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: var(--shadow);
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.stems-ready-hint::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 22px;
+  width: 10px;
+  height: 10px;
+  background: var(--surface-2);
+  border-left: 1px solid var(--accent);
+  border-top: 1px solid var(--accent);
+  transform: rotate(45deg);
+}
+.stems-ready-hint strong { display: block; margin-bottom: 2px; color: var(--text); }
+.stems-ready-hint .text-button { margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .btn-ghost.stems-ready { animation: none; }
+}
 
 .alert { padding: 11px 14px; border-radius: var(--radius); background: rgba(255, 209, 102, .08); border: 1px solid rgba(255, 209, 102, .3); color: var(--warning); font-size: 13px; }
 .resep-footer { display: flex; justify-content: flex-end; margin-top: 18px; }

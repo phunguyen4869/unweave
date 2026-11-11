@@ -6,9 +6,11 @@ import mimetypes
 import os
 from pathlib import Path
 import secrets
+import socket
 import subprocess
 import sys
 from urllib.parse import parse_qs, unquote, urlsplit
+from urllib.request import urlopen
 
 from .library import Library
 from .routes import build_router
@@ -18,36 +20,8 @@ from ..tools import MISSING_FFMPEG, ensure_ffmpeg_on_path
 
 STATIC = Path(__file__).resolve().parents[1] / "web"
 
-
-def extra_allowed_hosts() -> set[str]:
-    """Hosts beyond 127.0.0.1/localhost the UI answers to, from UNWEAVE_ALLOWED_HOSTS
-    (comma-separated; "name" matches any port, "name:port" only that port, "*" any host).
-
-    The loopback-only default is what stops DNS rebinding: a page on some other site
-    that rebinds its name to this machine still sends its own Host header. A server
-    reached over the LAN (the Docker image) has to list the names people type instead."""
-    raw = os.environ.get("UNWEAVE_ALLOWED_HOSTS", "")
-    return {entry.strip().lower() for entry in raw.split(",") if entry.strip()}
-
-
-def host_allowed(host: str, port: int, extra: set[str]) -> bool:
-    host = host.lower()
-    if host in {f"127.0.0.1:{port}", f"localhost:{port}"}:
-        return True
-    if not host or not extra:
-        return False
-    if "*" in extra or host in extra:
-        return True
-    try:
-        name = urlsplit(f"//{host}").hostname
-    except ValueError:
-        return False
-    return name is not None and (name in extra or f"[{name}]" in extra)
-
-
-def make_server(library: Library, port: int = 8765, host: str = "127.0.0.1"):
+def make_server(library: Library, port: int = 8765):
     token = secrets.token_urlsafe(32)
-    extra_hosts = extra_allowed_hosts()
     router = build_router(library)
 
     class Handler(BaseHTTPRequestHandler):
@@ -91,12 +65,9 @@ def make_server(library: Library, port: int = 8765, host: str = "127.0.0.1"):
             try:
                 self.connection.settimeout(120)
                 host = self.headers.get("Host", "")
-                # https too for listed hosts: a TLS reverse proxy in front of the container.
-                origins = {f"http://{host}"} | ({f"https://{host}"} if extra_hosts else set())
-                if (not host_allowed(host, self.server.server_port, extra_hosts)
-                        or self.headers.get("Origin", f"http://{host}") not in origins):
-                    hint = "" if extra_hosts else " To open it from another machine, add this host to UNWEAVE_ALLOWED_HOSTS."
-                    self.respond(403, {"error": f"Local same-origin requests only.{hint}"})
+                allowed = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
+                if host not in allowed or self.headers.get("Origin", f"http://{host}") != f"http://{host}":
+                    self.respond(403, {"error": "Local same-origin requests only."})
                     return
                 url = urlsplit(self.path)
                 path = unquote(url.path)
@@ -129,13 +100,51 @@ def make_server(library: Library, port: int = 8765, host: str = "127.0.0.1"):
                 print(f"UI request failed: {error}", file=sys.stderr)
                 self.respond(500, {"error": "Unexpected server error; see the terminal."})
 
-    server = ThreadingHTTPServer((host, port), Handler)
+    server = LocalServer(("127.0.0.1", port), Handler)
     server.daemon_threads = True
     return server
 
 
+class LocalServer(ThreadingHTTPServer):
+    """Binds its port exclusively. On Windows, SO_REUSEADDR (which HTTPServer sets) lets
+    a socket bind a port another program already listens on, so the window could end
+    up talking to that program; the exclusive flag makes the bind fail instead."""
+    allow_reuse_address = os.name != "nt"
+
+    def server_bind(self):
+        if os.name == "nt":
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
+# Ports tried after the requested one before asking the OS for any free port. The page
+# keeps its theme and language in localStorage, which is per port, so staying on the
+# requested port whenever it is free keeps those settings.
+PORT_ATTEMPTS = 20
+
+
+def bind_server(library: Library, port: int):
+    """make_server() on `port`, or the next free port when another program holds it."""
+    error = None
+    for candidate in (*range(port, port + PORT_ATTEMPTS), 0):
+        try:
+            return make_server(library, candidate)
+        except OSError as caught:
+            error = caught
+    raise error
+
+
+def running_unweave(port: int, timeout: float = 2.0) -> bool:
+    """Whether the server on `port` is Unweave's own, from another launch of the app."""
+    try:
+        with urlopen(f"http://127.0.0.1:{port}/", timeout=timeout) as response:
+            return response.status == 200 and b"<title>Unweave</title>" in response.read(4096)
+    except (OSError, ValueError):
+        return False
+
+
 def serve(projects: Path | None, port: int, cache: Path, window=None, config: Path | None = None,
-          default_root: Path | None = None, host: str = "127.0.0.1"):
+          default_root: Path | None = None, on_ready=None):
     if not ensure_ffmpeg_on_path():
         print(MISSING_FFMPEG, file=sys.stderr, flush=True)
     # Callers running from an installed, read-only location (Program Files) must pass
@@ -145,11 +154,13 @@ def serve(projects: Path | None, port: int, cache: Path, window=None, config: Pa
     config = config if config is not None else Path(".sound-razor/ui.json")
     default_root = default_root if default_root is not None else Path("output")
     library = Library(projects, config, cache, default_root, window=window)
-    server = make_server(library, port, host)
+    server = bind_server(library, port)
+    if server.server_port != port:
+        print(f"Port {port} is in use by another program; using {server.server_port}.", flush=True)
     print(f"Unweave UI: http://127.0.0.1:{server.server_port}", flush=True)
-    if host not in {"127.0.0.1", "localhost"}:
-        print(f"Listening on {host}; other hosts allowed: {', '.join(sorted(extra_allowed_hosts())) or 'none'}",
-              flush=True)
+    if on_ready is not None:
+        # The socket is already listening, so the window can connect from here on.
+        on_ready(server.server_port)
     print("Open that address in your browser. Stop the server with Ctrl+C.", flush=True)
     try:
         server.serve_forever()

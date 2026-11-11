@@ -7,9 +7,10 @@ import time
 import uuid
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from .store import metadata_fields
+from ..netutil import urlopen
 from ..tools import app_version
 
 _network_lock = threading.Lock()

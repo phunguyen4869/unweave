@@ -246,6 +246,11 @@
             <button id="export-open" class="btn btn-ghost btn-sm icon-download" data-i18n="song.export" disabled>Export</button>
             <button id="edit-open" class="btn btn-ghost btn-sm icon-edit" data-i18n="song.edit">Edit</button>
             <button id="delete-open" class="btn btn-ghost btn-sm btn-danger icon-trash" data-i18n-title="song.deleteAria"></button>
+            <div id="stems-ready-hint" class="stems-ready-hint" role="status" hidden>
+              <strong data-i18n="song.stemsReadyTitle">Your stems are ready</strong>
+              <p data-i18n="song.stemsReadyBody">Click Open folder and look inside <code>stems</code> for your FLAC files. You only need Export for other formats.</p>
+              <button id="stems-ready-dismiss" type="button" class="text-button" data-i18n="song.stemsReadyDismiss">Got it</button>
+            </div>
           </div>
         </div>
 
@@ -354,7 +359,7 @@
   <dialog id="split-dialog">
     <form id="split-form">
       <header class="dialog-header"><h2 data-i18n="dialog.split.title">Split guitar</h2><button type="button" class="close-dialog icon-close" data-i18n-title="common.close"></button></header>
-      <p class="dialog-sub" data-i18n="dialog.split.sub">Choose a section of the guitar track for the lead and rhythm split. The guitar stem itself is not changed.</p>
+      <p class="dialog-sub" data-i18n="dialog.split.sub">Choose a section of the guitar track for the lead and rhythm split. Splitting the whole track replaces the guitar stem with lead and rhythm. Splitting a section mutes that section in the guitar stem, so the three tracks play back as the original.</p>
       <div id="split-trim"></div>
       <div id="split-chip" class="trim-chip" hidden></div>
       <p id="split-error" class="form-error" role="alert"></p>
@@ -410,12 +415,21 @@
       <p id="export-section-note" class="hint" hidden></p>
       <label class="check-row"><input id="export-clipping" type="checkbox" checked> <span data-i18n="dialog.export.preventClipping">Prevent clipping</span></label>
       <p id="export-warning" class="hint warning-text" data-i18n="dialog.export.clipWarning" hidden>Stems that peak above full scale will clip in lossy formats.</p>
-      <p id="export-success" class="hint" data-i18n="dialog.export.successMsg" hidden>Export complete. The selected copies are ready.</p>
       <p id="export-error" class="form-error" role="alert"></p>
       <div class="dialog-footer">
-        <button id="export-reveal" type="button" class="btn btn-ghost" data-i18n="dialog.export.openExportsFolder" hidden>Open exports folder</button>
         <button type="button" class="btn btn-ghost close-dialog" data-i18n="common.close">Close</button>
         <button id="export-submit" type="submit" class="btn btn-primary" data-i18n="song.export">Export</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="export-done-dialog" class="dialog-sm">
+    <form method="dialog">
+      <header class="dialog-header"><h2 class="export-done-title" data-i18n="export.phase.complete">Export complete</h2><button type="button" class="close-dialog icon-close" data-i18n-title="common.close"></button></header>
+      <p id="export-done-summary" class="dialog-sub"></p>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-ghost close-dialog" data-i18n="common.close">Close</button>
+        <button id="export-done-reveal" type="button" class="btn btn-primary icon-folder" data-i18n="dialog.export.openExportsFolder">Open exports folder</button>
       </div>
     </form>
   </dialog>

@@ -20,11 +20,45 @@ def checkpoint(cache):
     return cached_download(MODEL_URL, destination, MODEL_SHA256)
 
 
-def split_guitar(source: Path, output: Path, cache: Path, trim=None) -> list[Path]:
+# Each end of a section is faded over this long so the cut makes no click.
+EDGE_FADE_SECONDS = 0.005
+
+
+def section_gain(frames: int, fade: int, fade_in: bool, fade_out: bool):
+    """Gain applied to the section before the split: 1 inside, ramping at a cut end."""
+    import numpy as np
+    gain = np.ones(frames, dtype='float32')
+    length = min(fade, frames)
+    if length > 0:
+        if fade_in:
+            gain[:length] = np.linspace(0, 1, length, dtype='float32')
+        if fade_out:
+            gain[-length:] = np.linspace(1, 0, length, dtype='float32')
+    return gain
+
+
+def mute_section(guitar, start_frame: int, gain):
+    """Leave a hole in the guitar where the split section was taken out, with the
+    opposite fade at its ends. Lead and rhythm add up to the section times `gain`, so
+    the guitar plus both of them plays back as the original guitar."""
+    guitar = guitar.copy()
+    guitar[start_frame:start_frame + len(gain)] *= (1 - gain)[:, None]
+    return guitar
+
+
+def split_guitar(source: Path, output: Path, cache: Path, trim=None,
+                 replace_source: bool = False) -> list[Path]:
+    """Split `source` into lead.flac and rhythm.flac in `output`.
+
+    With `replace_source`, the split also updates the guitar stem it came from, which
+    must then sit in `output`: a split of the whole stem removes it, since lead and
+    rhythm add back up to it, and a section split mutes that section of it."""
     source = source.expanduser().resolve()
     output = output.expanduser().resolve()
     if not source.is_file():
         raise ValueError('Separate the guitar track first.')
+    if replace_source and source.parent != output:
+        raise ValueError('Replacing the guitar stem needs it inside the output folder.')
     paths = [output/'lead.flac', output/'rhythm.flac']
     settings_path = output/'separation.json'
     validate_outputs(source, paths + [settings_path])
@@ -45,19 +79,20 @@ def split_guitar(source: Path, output: Path, cache: Path, trim=None) -> list[Pat
     except ImportError as error:
         raise RuntimeError('Install guitar splitting support: pip install -e ".[guitars]"') from error
     info = sf.info(source)
-    local_trim = parse_trim(trim, info.frames / info.samplerate, 2.0) if trim is not None else None
+    duration = info.frames / info.samplerate
+    local_trim = parse_trim(trim, duration, 2.0) if trim is not None else None
+    fade_in = local_trim is not None and local_trim[0] > 0.0005
+    fade_out = local_trim is not None and local_trim[1] < duration - 0.0005
+    # A range that spans the whole stem is the whole stem: nothing is cut off.
+    whole = not (fade_in or fade_out)
+    start_frame, gain = 0, None
     if local_trim is not None:
         start_frame = round(local_trim[0] * info.samplerate)
         frames = min(info.frames - start_frame, round((local_trim[1] - local_trim[0]) * info.samplerate))
         mix, sr = sf.read(source, dtype='float32', always_2d=True,
                           start=start_frame, frames=max(0, frames))
-        fade = round(0.005 * info.samplerate)
-        if fade > 0 and len(mix) > 0:
-            length = min(fade, len(mix))
-            if local_trim[0] > 0.0005:
-                mix[:length] *= np.linspace(0, 1, length, dtype='float32')[:, None]
-            if local_trim[1] < info.frames / info.samplerate - 0.0005:
-                mix[-length:] *= np.linspace(1, 0, length, dtype='float32')[:, None]
+        gain = section_gain(len(mix), round(EDGE_FADE_SECONDS * info.samplerate), fade_in, fade_out)
+        mix *= gain[:, None]
     else:
         mix, sr = sf.read(source, dtype='float32', always_2d=True)
     if sr != 44100 or mix.shape[1] != 2 or len(mix) == 0 or not np.isfinite(mix).all():
@@ -111,13 +146,24 @@ def split_guitar(source: Path, output: Path, cache: Path, trim=None) -> list[Pat
             'start': round(base + local_trim[0], 3),
             'end': round(base + local_trim[1], 3),
         }
+    if replace_source:
+        # Tells the project listing whether the guitar stem left behind still belongs
+        # on screen (a muted one does) or predates this rule.
+        settings['lead_rhythm_split']['guitar'] = 'removed' if whole else 'muted'
     with tempfile.TemporaryDirectory(prefix='.guitar-split-', dir=output) as temporary:
         stage = Path(temporary)
         # 24-bit: FLAC has no float format, and soundfile would default to 16-bit.
         sf.write(stage/paths[0].name, lead, sr, subtype='PCM_24')
         sf.write(stage/paths[1].name, mix-lead, sr, subtype='PCM_24')
         (stage/settings_path.name).write_text(json.dumps(settings, indent=2)+'\n', encoding='utf-8')
+        if replace_source and not whole:
+            guitar, _ = sf.read(source, dtype='float32', always_2d=True)
+            sf.write(stage/source.name, mute_section(guitar, start_frame, gain), sr, subtype=info.subtype)
         validate_outputs(source, paths + [settings_path])
         for path in paths + [settings_path]:
             (stage/path.name).replace(path)
+        if replace_source and not whole:
+            (stage/source.name).replace(source)
+    if replace_source and whole:
+        source.unlink()
     return [path.resolve() for path in paths]
